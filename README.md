@@ -1,6 +1,7 @@
 This is a little Bash script that configures a Proxmox 8 or 9 server to use Nvidia vGPU's. 
 
 For further instructions see original author's blogpost at https://wvthoog.nl/proxmox-7-vgpu-v3/
+
 For the script architecture, features, installation, and usage, see https://deepwiki.com/anomixer/proxmox-vgpu-installer
 
 Changes in version 1.4 (current release)
@@ -74,6 +75,7 @@ The `gpu_info.db` SQLite database contains GPU compatibility information for vGP
 ## To-Do
 1.  Replace FastAPI-DLS with nvlts (https://git.collinwebdesigns.de/vgpu/nvlts) in the future release. (current nvlts may not work).
 2.  Continue adding new GPU data to gpu_info.db as new models are released (RTX 5000 series desktop GPUs completed).
+
 
 
 
