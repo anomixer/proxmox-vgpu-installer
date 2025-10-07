@@ -9,7 +9,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.4
+SCRIPT_VERSION=1.5
 VGPU_DIR=$(pwd)
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
@@ -139,27 +139,108 @@ major_version=$(echo "$version" | sed 's/\([0-9]*\).*/\1/')
 # Function to map filename to driver version and patch
 map_filename_to_version() {
     local filename="$1"
-    if [[ "$filename" =~ ^(NVIDIA-Linux-x86_64-570\.158\.02-vgpu-kvm\.run|NVIDIA-Linux-x86_64-570\.172\.07-vgpu-kvm\.run|NVIDIA-Linux-x86_64-580\.65\.05-vgpu-kvm\.run|NVIDIA-Linux-x86_64-580\.82\.02-vgpu-kvm\.run)$ ]]; then
+    # Updated regex to include all supported driver versions from v1.1, PTHyperdrive fork, and current versions
+    if [[ "$filename" =~ ^(NVIDIA-Linux-x86_64-535\.54\.06-vgpu-kvm\.run|NVIDIA-Linux-x86_64-535\.104\.06-vgpu-kvm\.run|NVIDIA-Linux-x86_64-535\.129\.03-vgpu-kvm\.run|NVIDIA-Linux-x86_64-535\.161\.05-vgpu-kvm\.run|NVIDIA-Linux-x86_64-535\.183\.04-vgpu-kvm\.run|NVIDIA-Linux-x86_64-535\.216\.01-vgpu-kvm\.run|NVIDIA-Linux-x86_64-535\.230\.02-vgpu-kvm\.run|NVIDIA-Linux-x86_64-550\.54\.10-vgpu-kvm\.run|NVIDIA-Linux-x86_64-550\.54\.16-vgpu-kvm\.run|NVIDIA-Linux-x86_64-550\.90\.05-vgpu-kvm\.run|NVIDIA-Linux-x86_64-550\.127\.06-vgpu-kvm\.run|NVIDIA-Linux-x86_64-550\.144\.02-vgpu-kvm\.run|NVIDIA-Linux-x86_64-550\.163\.02-vgpu-kvm\.run|NVIDIA-Linux-x86_64-570\.124\.03-vgpu-kvm\.run|NVIDIA-Linux-x86_64-570\.133\.10-vgpu-kvm\.run|NVIDIA-Linux-x86_64-570\.158\.02-vgpu-kvm\.run|NVIDIA-Linux-x86_64-570\.172\.07-vgpu-kvm\.run|NVIDIA-Linux-x86_64-580\.65\.05-vgpu-kvm\.run|NVIDIA-Linux-x86_64-580\.82\.02-vgpu-kvm\.run)$ ]]; then
         case "$filename" in
-            NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run)
-                driver_version="19.1"
-                driver_patch="580.82.02.patch"
-                md5="fe3ecc481c3332422f33b6fab1d51a36"
+            # v16.x series drivers (from v1.1 and PTHyperdrive fork)
+            NVIDIA-Linux-x86_64-535.54.06-vgpu-kvm.run)
+                driver_version="16.0"
+                driver_patch="535.54.06.patch"
+                md5="b892f75f8522264bc176f5a555acb176"
                 ;;
-            NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run)
-                driver_version="19.0"
-                driver_patch="580.65.05.patch"
-                md5="c75f6465338f0178fcbffe654b5e2086"
+            NVIDIA-Linux-x86_64-535.104.06-vgpu-kvm.run)
+                driver_version="16.1"
+                driver_patch="535.104.06.patch"
+                md5="1020ad5b89fa0570c27786128385ca48"
+                ;;
+            NVIDIA-Linux-x86_64-535.129.03-vgpu-kvm.run)
+                driver_version="16.2"
+                driver_patch="535.129.03.patch"
+                md5="0048208a62bacd2a7dd12fa736aa5cbb"
+                ;;
+            NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run)
+                # Note: This file supports both 16.4 and 16.5 - using 16.5 as standard
+                driver_version="16.5"
+                driver_patch="535.161.05.patch"
+                md5="bad6e09aeb58942750479f091bb9c4b6"
+                ;;
+            NVIDIA-Linux-x86_64-535.183.04-vgpu-kvm.run)
+                driver_version="16.7"
+                driver_patch="535.183.04.patch"
+                md5="68961f01a2332b613fe518afd4bfbfb2"
+                ;;
+            NVIDIA-Linux-x86_64-535.216.01-vgpu-kvm.run)
+                driver_version="16.8"
+                driver_patch="535.216.01.patch"
+                md5="18627628e749f893cd2c3635452006a46"
+                ;;
+            NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run)
+                driver_version="16.9"
+                driver_patch="535.230.02.patch"
+                md5="3f6412723880aa5720b44cf0a9a13009"
+                ;;
+            # v17.x series drivers (from v1.1 and PTHyperdrive fork)
+            NVIDIA-Linux-x86_64-550.54.10-vgpu-kvm.run)
+                driver_version="17.0"
+                driver_patch="550.54.10.patch"
+                md5="5f5e312cbd5bb64946e2a1328a98c08d"
+                ;;
+            NVIDIA-Linux-x86_64-550.54.16-vgpu-kvm.run)
+                driver_version="17.1"
+                driver_patch="550.54.16.patch"
+                md5="4d78514599c16302a0111d355dbf11e3"
+                ;;
+            NVIDIA-Linux-x86_64-550.90.05-vgpu-kvm.run)
+                driver_version="17.3"
+                driver_patch="550.90.05.patch"
+                md5="a3cddad85eee74dc15dbadcbe30dcf3a"
+                ;;
+            NVIDIA-Linux-x86_64-550.127.06-vgpu-kvm.run)
+                driver_version="17.4"
+                driver_patch="550.127.06.patch"
+                md5="400b1b2841908ea36fd8f7fdbec18401"
+                ;;
+            NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run)
+                driver_version="17.5"
+                driver_patch="550.144.02.patch"
+                md5="37016ba868a0b4390c38aebbacfba09e"
+                ;;
+            NVIDIA-Linux-x86_64-550.163.02-vgpu-kvm.run)
+                driver_version="17.6"
+                driver_patch="550.163.10.patch"
+                md5="093036d83baf879a4bb667b484597789"
+                ;;
+            # v18.x series drivers (from PTHyperdrive fork and current)
+            NVIDIA-Linux-x86_64-570.124.03-vgpu-kvm.run)
+                driver_version="18.0"
+                driver_patch="570.124.03.patch"
+                md5="1804b889e27b7f868afb5521d871b095"
+                ;;
+            NVIDIA-Linux-x86_64-570.133.10-vgpu-kvm.run)
+                driver_version="18.1"
+                driver_patch="570.133.10.patch"
+                md5="f435eacdbe3c8002ccad14bd62c9bd2d"
+                ;;
+            NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run)
+                driver_version="18.3"
+                driver_patch="570.158.02.patch"
+                md5="c68a523bb835ea753bab2c1e9055d610"
                 ;;
             NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run)
                 driver_version="18.4"
                 driver_patch="570.172.07.patch"
                 md5="5b370637f2aaf2f1828027aeaabafff9"
                 ;;
-            NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run)
-                driver_version="18.3"
-                driver_patch="570.158.02.patch"
-                md5="c68a523bb835ea753bab2c1e9055d610"
+            # v19.x series drivers (current)
+            NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run)
+                driver_version="19.0"
+                driver_patch="580.65.05.patch"
+                md5="c75f6465338f0178fcbffe654b5e2086"
+                ;;
+            NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run)
+                driver_version="19.1"
+                driver_patch="580.82.02.patch"
+                md5="fe3ecc481c3332422f33b6fab1d51a36"
                 ;;
         esac
         return 0  # Return true
@@ -170,6 +251,10 @@ map_filename_to_version() {
 
 # License the vGPU (from v1.1.sh)
 configure_fastapi_dls() {
+    echo ""
+    echo -e "${YELLOW}[!]${NC} ${RED}vGPU Delegated License Service (FastAPI-DLS) Compatibility Notice:${NC}"
+    echo -e "${YELLOW}[-]${NC} FastAPI-DLS natively works with vGPU v17.x and older versions"
+    echo -e "${YELLOW}[-]${NC} It requires 'gridd-unlock-patcher' since vGPU v18.0 and later versions"
     echo ""
     read -p "$(echo -e "${BLUE}[?]${NC} Do you want to license the vGPU? (y/n): ")" choice
     echo ""
@@ -367,6 +452,9 @@ case $STEP in
                 8)
                     proxmox_repo="deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription"
                     ;;
+                7)
+                    proxmox_repo="deb http://download.proxmox.com/debian/pve bullseye pve-no-subscription"
+                    ;;
                 *)
                     echo -e "${RED}[!]${NC} Unsupported Proxmox version: ${YELLOW}$major_version${NC}"
                     exit 1
@@ -376,8 +464,10 @@ case $STEP in
             # Replace repository lines
             replace_repo_lines "deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise" "$proxmox_repo"
             replace_repo_lines "deb https://enterprise.proxmox.com/debian/pve trixie pve-enterprise" "$proxmox_repo"
+            replace_repo_lines "deb https://enterprise.proxmox.com/debian/pve bullseye pve-enterprise" "$proxmox_repo"
 			replace_repo_lines "deb https://enterprise.proxmox.com/debian/ceph-quincy bookworm enterprise" "deb http://download.proxmox.com/debian/ceph-quincy bookworm no-subscription"
 			replace_repo_lines "deb https://enterprise.proxmox.com/debian/ceph-reef trixie enterprise" "deb http://download.proxmox.com/debian/ceph-reef trixie no-subscription"
+			replace_repo_lines "deb https://enterprise.proxmox.com/debian/ceph-pacific bullseye enterprise" "deb http://download.proxmox.com/debian/ceph-pacific bullseye no-subscription"
 
             # Check if Proxmox repository entry exists in /etc/apt/sources.list
             if ! grep -q "$proxmox_repo" /etc/apt/sources.list; then
@@ -413,9 +503,18 @@ case $STEP in
             # Downgrade kernel and headers for Nvidia drivers to install successfully
             # apt install proxmox-kernel-6.14 proxmox-headers-6.14
             # used to be pve-headers, but that will use latest version (which is currently 6.14)
-            run_command "Installing packages" "info" "apt install -y git build-essential dkms proxmox-kernel-$(uname -r) proxmox-headers-$(uname -r) mdevctl wget pve-nvidia-vgpu-helper"
-
-            run_command "Setup pve-nvidia-vgpu-helper" "info" "echo y|pve-nvidia-vgpu-helper setup"
+            
+            # Install base packages (common for all Proxmox versions)
+            run_command "Installing base packages" "info" "apt install -y git build-essential dkms proxmox-kernel-$(uname -r) proxmox-headers-$(uname -r) mdevctl wget"
+            
+            # Install pve-nvidia-vgpu-helper only for Proxmox 8/9 (required for v18.0+ drivers)
+            # For Proxmox 7 or pre-v18.0 drivers, we use the legacy v1.1 methodology
+            if [[ "$major_version" == "8" ]] || [[ "$major_version" == "9" ]]; then
+                run_command "Installing pve-nvidia-vgpu-helper (Proxmox 8/9)" "info" "apt install -y pve-nvidia-vgpu-helper"
+                run_command "Setup pve-nvidia-vgpu-helper" "info" "echo y|pve-nvidia-vgpu-helper setup"
+            else
+                echo -e "${YELLOW}[-]${NC} Skipping pve-nvidia-vgpu-helper installation (Proxmox 7 detected - using legacy mode)"
+            fi
 			
             ## Pinning the kernel
             #kernel_version_compare() {
@@ -850,18 +949,36 @@ case $STEP in
             echo -e "${GREEN}[+]${NC} Downloading Nvidia vGPU drivers"
 
             # Offer to download vGPU driver versions based on Proxmox version
-            if [[ "$major_version" == "8" ]] || [[ "$major_version" == "9" ]]; then
+            if [[ "$major_version" == "7" ]]; then
                 echo -e "${GREEN}[+]${NC} You are running Proxmox version $version"
-                echo -e "${GREEN}[+]${NC} Highly recommended that you download driver 18.x or 19.x"
+                echo -e "${GREEN}[+]${NC} Recommended driver versions: 16.x, 17.0 (legacy support)"
+            elif [[ "$major_version" == "8" ]] || [[ "$major_version" == "9" ]]; then
+                echo -e "${GREEN}[+]${NC} You are running Proxmox version $version"
+                echo -e "${GREEN}[+]${NC} Recommended driver versions: 18.x, 19.x (native vGPU support)"
             fi
 
             echo ""
             echo "Select vGPU driver version:"
             echo ""
-            echo "1: 19.1 (580.82.02)"
-            echo "2: 19.0 (580.65.05)"
-            echo "3: 18.4 (570.172.07)"
-            echo "4: 18.3 (570.158.02)"
+            echo "  1: 19.1 (580.82.02) - Native vGPU only"
+            echo "  2: 19.0 (580.65.05) - Native vGPU only"
+            echo "  3: 18.4 (570.172.07) - Native vGPU only"
+            echo "  4: 18.3 (570.158.02) - Native vGPU only"
+            echo "  5: 18.1 (570.133.10) - Native vGPU only"
+            echo "  6: 18.0 (570.124.03)"
+            echo "  7: 17.6 (550.163.02) - Native vGPU only"
+            echo "  8: 17.5 (550.144.02)"
+            echo "  9: 17.4 (550.127.06)"
+            echo " 10: 17.3 (550.90.05)"
+            echo " 11: 17.1 (550.54.16)"
+            echo " 12: 17.0 (550.54.10)"
+            echo " 13: 16.9 (535.230.02) - Use with Pascal or older GPUs"
+            echo " 14: 16.8 (535.216.01) - Use with Pascal or older GPUs"
+            echo " 15: 16.7 (535.183.04) - Use with Pascal or older GPUs"
+            echo " 16: 16.5 (535.161.05) - Use with Pascal or older GPUs"
+            echo " 17: 16.2 (535.129.03) - Use with Pascal or older GPUs"
+            echo " 18: 16.1 (535.104.06) - Use with Pascal or older GPUs"
+            echo " 19: 16.0 (535.54.06) - Use with Pascal or older GPUs"
             echo ""
 
             read -p "Enter your choice: " driver_choice
@@ -872,6 +989,21 @@ case $STEP in
                 2) driver_filename="NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" ;;
                 3) driver_filename="NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" ;;
                 4) driver_filename="NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" ;;
+                5) driver_filename="NVIDIA-Linux-x86_64-570.133.10-vgpu-kvm.run" ;;
+                6) driver_filename="NVIDIA-Linux-x86_64-570.124.03-vgpu-kvm.run" ;;
+                7) driver_filename="NVIDIA-Linux-x86_64-550.163.02-vgpu-kvm.run" ;;
+                8) driver_filename="NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run" ;;
+                9) driver_filename="NVIDIA-Linux-x86_64-550.127.06-vgpu-kvm.run" ;;
+                10) driver_filename="NVIDIA-Linux-x86_64-550.90.05-vgpu-kvm.run" ;;
+                11) driver_filename="NVIDIA-Linux-x86_64-550.54.16-vgpu-kvm.run" ;;
+                12) driver_filename="NVIDIA-Linux-x86_64-550.54.10-vgpu-kvm.run" ;;
+                13) driver_filename="NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run" ;;
+                14) driver_filename="NVIDIA-Linux-x86_64-535.216.01-vgpu-kvm.run" ;;
+                15) driver_filename="NVIDIA-Linux-x86_64-535.183.04-vgpu-kvm.run" ;;
+                16) driver_filename="NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" ;;
+                17) driver_filename="NVIDIA-Linux-x86_64-535.129.03-vgpu-kvm.run" ;;
+                18) driver_filename="NVIDIA-Linux-x86_64-535.104.06-vgpu-kvm.run" ;;
+                19) driver_filename="NVIDIA-Linux-x86_64-535.54.06-vgpu-kvm.run" ;;
                 *) 
                     echo "Invalid choice. Please enter a valid option."
                     exit 1
@@ -891,17 +1023,67 @@ case $STEP in
        
             # Set the driver URL
             case "$driver_version" in
+                # v19.x series (Current - alist.homelabproject.cc)
                 19.1)
                     driver_url="https://alist.homelabproject.cc/d/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Host_Drivers/NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run"
                     ;;
                 19.0)
                     driver_url="https://alist.homelabproject.cc/d/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Host_Drivers/NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run"
                     ;;
+                # v18.x series (Current - alist.homelabproject.cc)
                 18.4)
                     driver_url="https://alist.homelabproject.cc/d/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Host_Drivers/NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run"
                     ;;
                 18.3)
                     driver_url="https://alist.homelabproject.cc/d/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Host_Drivers/NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run"
+                    ;;
+                # v18.x series (PTHyperdrive fork - mega.nz)
+                18.1)
+                    driver_url="https://mega.nz/file/0YpHTAxJ#_XMpdJ68w3sM72p87kYSiEQXFA5BbFZl_xvF_XZSd4k"
+                    ;;
+                18.0)
+                    driver_url="https://mega.nz/file/RUxgjLRZ#aDy-DWKJXg-rTrisraE2MKrKbl1jbX4-13L0W32fiHQ"
+                    ;;
+                # v17.x series (PTHyperdrive fork and v1.1 - mega.nz)
+                17.6)
+                    driver_url="https://mega.nz/file/NAYAGYpL#en-eYfid3GYmHkGVCAUagc6P2rbdw1Y2E9-7hOW19m8"
+                    ;;
+                17.5)
+                    driver_url="https://mega.nz/file/sYQ10b4b#hfGVeRog1pmNyx63N_I-siFENBWZj3w_ZQDsjW4PzW4"
+                    ;;
+                17.4)
+                    driver_url="https://mega.nz/file/VJIVTBiB#nFOU3zkoWyk4Dq1eW-y2dWUQ-YuvxVh_PYXT3bzdfYE"
+                    ;;
+                17.3)
+                    driver_url="https://mega.nz/file/1dYWAaDJ#9lGnw1CccnIcH7n7UAZ5nfGt3yUXcen72nOUiztw-RU"
+                    ;;
+                17.1)
+                    driver_url="https://mega.nz/file/sAYwDS7S#eyIeE_GYk_A0hwhayj3nOpcybLV_KAokJwXifDMQtPQ"
+                    ;;
+                17.0)
+                    driver_url="https://mega.nz/file/JjtyXRiC#cTIIvOIxu8vf-RdhaJMGZAwSgYmqcVEKNNnRRJTwDFI"
+                    ;;
+                # v16.x series (PTHyperdrive fork and v1.1 - mega.nz)
+                16.9)
+                    driver_url="https://mega.nz/file/JFYDETBa#IqaXaoqrPAmSZSjbAXCWvHtiUxU0n9O7RJF8Xu5HXIo"
+                    ;;
+                16.8)
+                    driver_url="https://mega.nz/file/gJBGSZxK#cqyK3KCsfB0mYL8QCsV6P5C9ABmUcV7bQgE9DQ4_8O4"
+                    ;;
+                16.7)
+                    driver_url="https://mega.nz/file/gIwxGSyJ#xDcaxkymYcNFUTzwZ_m1HWcTgQrMSofJLPYMU-YGLMo"
+                    ;;
+                16.5)
+                    driver_url="https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20"
+                    ;;
+                16.2)
+                    driver_url="https://mega.nz/file/EyEXTbbY#J9FUQL1Mo4ZpNyDijStEH4bWn3AKwnSAgJEZcxUnOiQ"
+                    ;;
+                16.1)
+                    driver_url="https://mega.nz/file/wy1WVCaZ#Yq2Pz_UOfydHy8nC_X_nloR4NIFC1iZFHqJN0EiAicU"
+                    ;;
+                16.0)
+                    driver_url="https://mega.nz/file/xrNCCAaT#UuUjqRap6urvX4KA1m8-wMTCW5ZwuWKUj6zAB4-NPSo"
                     ;;
             esac
 
@@ -1068,7 +1250,10 @@ case $STEP in
             }
 
             # Offer to download vGPU driver versions based on Proxmox version and supported driver
-            if [[ "$major_version" == "8" ]] || [[ "$major_version" == "9" ]]; then
+            if [[ "$major_version" == "7" ]]; then
+                echo -e "${YELLOW}[-]${NC} You are running Proxmox version $version"
+                echo -e "${YELLOW}[-]${NC} Recommended: Use legacy driver versions (16.x, 17.0) for better compatibility"
+            elif [[ "$major_version" == "8" ]] || [[ "$major_version" == "9" ]]; then
                 echo -e "${YELLOW}[-]${NC} You are running Proxmox version $version"
                 if contains_version "19" && contains_version "18"; then
                     echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver versions 19.0 and 18.x"
@@ -1076,16 +1261,35 @@ case $STEP in
                     echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver version 19.0"
                 elif contains_version "18"; then
                     echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver version 18.x"
+                elif contains_version "17"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver version 17.x"
+                elif contains_version "16"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver version 16.x"
                 fi
             fi
 
             echo ""
             echo "Select vGPU driver version:"
             echo ""
-            echo "1: 19.1 (580.82.02)"
-            echo "2: 19.0 (580.65.05)"
-            echo "3: 18.4 (570.172.07)"
-            echo "4: 18.3 (570.158.02)"
+            echo "  1: 19.1 (580.82.02) - Native vGPU only"
+            echo "  2: 19.0 (580.65.05) - Native vGPU only"
+            echo "  3: 18.4 (570.172.07) - Native vGPU only"
+            echo "  4: 18.3 (570.158.02) - Native vGPU only"
+            echo "  5: 18.1 (570.133.10) - Native vGPU only"
+            echo "  6: 18.0 (570.124.03)"
+            echo "  7: 17.6 (550.163.02) - Native vGPU only"
+            echo "  8: 17.5 (550.144.02)"
+            echo "  9: 17.4 (550.127.06)"
+            echo " 10: 17.3 (550.90.05)"
+            echo " 11: 17.1 (550.54.16)"
+            echo " 12: 17.0 (550.54.10)"
+            echo " 13: 16.9 (535.230.02) - Use with Pascal or older GPUs"
+            echo " 14: 16.8 (535.216.01) - Use with Pascal or older GPUs"
+            echo " 15: 16.7 (535.183.04) - Use with Pascal or older GPUs"
+            echo " 16: 16.5 (535.161.05) - Use with Pascal or older GPUs"
+            echo " 17: 16.2 (535.129.03) - Use with Pascal or older GPUs"
+            echo " 18: 16.1 (535.104.06) - Use with Pascal or older GPUs"
+            echo " 19: 16.0 (535.54.06) - Use with Pascal or older GPUs"
             echo ""
 
             read -p "Enter your choice: " driver_choice
@@ -1098,6 +1302,21 @@ case $STEP in
                 2) driver_filename="NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" ;;
                 3) driver_filename="NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" ;;
                 4) driver_filename="NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" ;;
+                5) driver_filename="NVIDIA-Linux-x86_64-570.133.10-vgpu-kvm.run" ;;
+                6) driver_filename="NVIDIA-Linux-x86_64-570.124.03-vgpu-kvm.run" ;;
+                7) driver_filename="NVIDIA-Linux-x86_64-550.163.02-vgpu-kvm.run" ;;
+                8) driver_filename="NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run" ;;
+                9) driver_filename="NVIDIA-Linux-x86_64-550.127.06-vgpu-kvm.run" ;;
+                10) driver_filename="NVIDIA-Linux-x86_64-550.90.05-vgpu-kvm.run" ;;
+                11) driver_filename="NVIDIA-Linux-x86_64-550.54.16-vgpu-kvm.run" ;;
+                12) driver_filename="NVIDIA-Linux-x86_64-550.54.10-vgpu-kvm.run" ;;
+                13) driver_filename="NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run" ;;
+                14) driver_filename="NVIDIA-Linux-x86_64-535.216.01-vgpu-kvm.run" ;;
+                15) driver_filename="NVIDIA-Linux-x86_64-535.183.04-vgpu-kvm.run" ;;
+                16) driver_filename="NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" ;;
+                17) driver_filename="NVIDIA-Linux-x86_64-535.129.03-vgpu-kvm.run" ;;
+                18) driver_filename="NVIDIA-Linux-x86_64-535.104.06-vgpu-kvm.run" ;;
+                19) driver_filename="NVIDIA-Linux-x86_64-535.54.06-vgpu-kvm.run" ;;
                 *) 
                     echo "Invalid choice. Please enter a valid option."
                     exit 1
@@ -1116,17 +1335,67 @@ case $STEP in
             # Set the driver URL if not provided
             if [ -z "$URL" ]; then
                 case "$driver_version" in
+                    # v19.x series (Current - alist.homelabproject.cc)
                     19.1)
                         driver_url="https://alist.homelabproject.cc/d/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Host_Drivers/NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run"
                         ;;
                     19.0)
                         driver_url="https://alist.homelabproject.cc/d/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Host_Drivers/NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run"
                         ;;
+                    # v18.x series (Current - alist.homelabproject.cc)
                     18.4)
                         driver_url="https://alist.homelabproject.cc/d/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Host_Drivers/NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run"
                         ;;
                     18.3)
                         driver_url="https://alist.homelabproject.cc/d/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Host_Drivers/NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run"
+                        ;;
+                    # v18.x series (PTHyperdrive fork - mega.nz)
+                    18.1)
+                        driver_url="https://mega.nz/file/0YpHTAxJ#_XMpdJ68w3sM72p87kYSiEQXFA5BbFZl_xvF_XZSd4k"
+                        ;;
+                    18.0)
+                        driver_url="https://mega.nz/file/RUxgjLRZ#aDy-DWKJXg-rTrisraE2MKrKbl1jbX4-13L0W32fiHQ"
+                        ;;
+                    # v17.x series (PTHyperdrive fork and v1.1 - mega.nz)
+                    17.6)
+                        driver_url="https://mega.nz/file/NAYAGYpL#en-eYfid3GYmHkGVCAUagc6P2rbdw1Y2E9-7hOW19m8"
+                        ;;
+                    17.5)
+                        driver_url="https://mega.nz/file/sYQ10b4b#hfGVeRog1pmNyx63N_I-siFENBWZj3w_ZQDsjW4PzW4"
+                        ;;
+                    17.4)
+                        driver_url="https://mega.nz/file/VJIVTBiB#nFOU3zkoWyk4Dq1eW-y2dWUQ-YuvxVh_PYXT3bzdfYE"
+                        ;;
+                    17.3)
+                        driver_url="https://mega.nz/file/1dYWAaDJ#9lGnw1CccnIcH7n7UAZ5nfGt3yUXcen72nOUiztw-RU"
+                        ;;
+                    17.1)
+                        driver_url="https://mega.nz/file/sAYwDS7S#eyIeE_GYk_A0hwhayj3nOpcybLV_KAokJwXifDMQtPQ"
+                        ;;
+                    17.0)
+                        driver_url="https://mega.nz/file/JjtyXRiC#cTIIvOIxu8vf-RdhaJMGZAwSgYmqcVEKNNnRRJTwDFI"
+                        ;;
+                    # v16.x series (PTHyperdrive fork and v1.1 - mega.nz)
+                    16.9)
+                        driver_url="https://mega.nz/file/JFYDETBa#IqaXaoqrPAmSZSjbAXCWvHtiUxU0n9O7RJF8Xu5HXIo"
+                        ;;
+                    16.8)
+                        driver_url="https://mega.nz/file/gJBGSZxK#cqyK3KCsfB0mYL8QCsV6P5C9ABmUcV7bQgE9DQ4_8O4"
+                        ;;
+                    16.7)
+                        driver_url="https://mega.nz/file/gIwxGSyJ#xDcaxkymYcNFUTzwZ_m1HWcTgQrMSofJLPYMU-YGLMo"
+                        ;;
+                    16.5)
+                        driver_url="https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20"
+                        ;;
+                    16.2)
+                        driver_url="https://mega.nz/file/EyEXTbbY#J9FUQL1Mo4ZpNyDijStEH4bWn3AKwnSAgJEZcxUnOiQ"
+                        ;;
+                    16.1)
+                        driver_url="https://mega.nz/file/wy1WVCaZ#Yq2Pz_UOfydHy8nC_X_nloR4NIFC1iZFHqJN0EiAicU"
+                        ;;
+                    16.0)
+                        driver_url="https://mega.nz/file/xrNCCAaT#UuUjqRap6urvX4KA1m8-wMTCW5ZwuWKUj6zAB4-NPSo"
                         ;;
                 esac
             fi

@@ -4,11 +4,24 @@ For further instructions see original author's blogpost at https://wvthoog.nl/pr
 
 For the script architecture, features, installation, and usage, see https://deepwiki.com/anomixer/proxmox-vgpu-installer
 
-Changes in version 1.4 (current release)
+Changes in version 1.5 (current release)
+- This is a major enhanced release for all users that integrated original author's functions and other forker's driver sources!
+- **Expanded Driver Support**: Added support for driver versions from v1.1 and [PTHyperdrive fork](https://github.com/PTHyperdrive/proxmox-vgpu-installer):
+  - v16.x series: 16.0, 16.1, 16.2, 16.5, 16.7, 16.8, 16.9 (Pascal/Older GPUs)
+  - v17.x series: 17.0, 17.1, 17.3, 17.4, 17.5, 17.6 (Pascal/Newer GPUs, 17.6 Native vGPU only)
+  - v18.x series: 18.0, 18.1
+- **Proxmox 7 Support**: Re-added support for Proxmox 7 with legacy driver compatibility (v16.x, v17.0).
+- **Legacy Mode**: Automatic detection and bypass of `pve-nvidia-vgpu-helper` for pre-v18.x drivers on Proxmox 7.
+- **Enhanced Driver Menu**: Refined driver selection display with clear compatibility annotations indicating GPU requirements and vGPU support levels.
+- **Mixed Source Downloads**: Integrated driver URLs from both alist.homelabproject.cc (current) and mega.nz (legacy/fork versions).
+- **Kernel Pin Independence**: Confirmed kernel pinning is optional to support broader vGPU version compatibility.
+- **FastAPI-DLS Compatibility**: Added compatibility warnings for vGPU licensing - works natively with v17.x and older, requires gridd-unlock-patcher for v18.0+.
+- **Note**: Driver version 19.1 (580.82.02) currently has no patch file available. Please wait for the 580.82.02.patch release.
+
+Changes in version 1.4
 - Fixed patch compatibility issue with Debian 13 (Proxmox 9) where patch v2.8 causes NUL byte errors during driver patching.
 - Added automatic detection and installation of patch v2.7.6 when needed for NVIDIA driver patching.
 - Improved error logging for the patching process.
-- **Note**: Driver version 19.1 (580.82.02) currently has no patch file available. Please wait for the 580.82.02.patch release. Current vGPU patching works on 19.0 and 18.x versions only.
 
 Changes in version 1.3
 - Added support for driver version 19.1 (580.82.02) - supports RTX PRO 6000 Blackwell Server Edition.
