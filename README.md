@@ -8,8 +8,9 @@ Changes in version 1.5 (current release)
 - This is a major enhanced release for all users that integrated original author's functions and other forker's driver sources!
 - **Expanded Driver Support**: Added support for driver versions from v1.1 and [PTHyperdrive fork](https://github.com/PTHyperdrive/proxmox-vgpu-installer):
   - v16.x series: 16.0, 16.1, 16.2, 16.5, 16.7, 16.8, 16.9 (Pascal/Older GPUs)
-  - v17.x series: 17.0, 17.1, 17.3, 17.4, 17.5, 17.6 (Pascal/Newer GPUs, 17.6 Native vGPU only)
-  - v18.x series: 18.0, 18.1
+  - v17.x series: 17.0, 17.1, 17.3, 17.4, 17.5, 17.6 (Pascal/Newer GPUs, v17.6 Native vGPU only)
+  - v18.x series: 18.0, 18.1, and 18.3, 18.4 (Newer GPUs, v18.1+ Native vGPU only)
+  - v19.x series: 19.0, 19.1 (19.x Native vGPU only)
 - **Proxmox 7 Support**: Re-added support for Proxmox 7 with legacy driver compatibility (v16.x, v17.0).
 - **Legacy Mode**: Automatic detection and bypass of `pve-nvidia-vgpu-helper` for pre-v18.x drivers on Proxmox 7.
 - **Enhanced Driver Menu**: Refined driver selection display with clear compatibility annotations indicating GPU requirements and vGPU support levels.
@@ -88,6 +89,7 @@ The `gpu_info.db` SQLite database contains GPU compatibility information for vGP
 ## To-Do
 1.  Replace FastAPI-DLS with nvlts (https://git.collinwebdesigns.de/vgpu/nvlts) in the future release. (current nvlts may not work).
 2.  Continue adding new GPU data to gpu_info.db as new models are released (RTX 5000 series desktop GPUs completed).
+
 
 
 
