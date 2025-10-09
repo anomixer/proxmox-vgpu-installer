@@ -4,7 +4,15 @@ For further instructions see original author's blogpost at https://wvthoog.nl/pr
 
 For the script architecture, features, installation, and usage, see https://deepwiki.com/anomixer/proxmox-vgpu-installer
 
-Changes in version 1.5 (current release)
+Changes in version 1.51 (current release)
+- This version is a minor fix for driver source (megadl/wget) issue.
+  - Split logic for legacy vs new drivers to fix download/patch issues introduced in v1.50.
+  - v16.x–v17.x: use legacy mega.nz links with megadl and legacy install args `--dkms -m=kernel -s`.
+  - v18.3+ : use alist.homelabproject.cc links with wget; v18.0 and v18.1 remain on mega.nz with megadl.
+  - v18.x (all): use install args `--dkms -s` (patch/install flags are the same across v18.x and newer).
+  - Auto-detects the correct download tool based on URL (mega.nz -> megadl; otherwise wget/curl) and installs megatools on demand.
+
+Changes in version 1.5
 - This is a major enhanced release for all users that integrated original author's functions and other forker's driver sources!
 - **Expanded Driver Support**: Added support for driver versions from v1.1 and [PTHyperdrive fork](https://github.com/PTHyperdrive/proxmox-vgpu-installer):
   - v16.x series: 16.0, 16.1, 16.2, 16.5, 16.7, 16.8, 16.9 (Pascal/Older GPUs)

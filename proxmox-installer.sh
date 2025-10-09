@@ -9,7 +9,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.5
+SCRIPT_VERSION=1.51
 VGPU_DIR=$(pwd)
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
@@ -939,6 +939,8 @@ case $STEP in
             fi
             
             echo ""
+			echo "Done. Remember to reboot your server to take effect."
+			echo ""
             
             exit 0
             ;;
@@ -1095,9 +1097,17 @@ case $STEP in
                 echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
                   
-            # Download and install the selected vGPU driver version
-            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver using wget"
-            wget -O "$driver_filename" "$driver_url"
+			# Download and install the selected vGPU driver version
+            if [[ "$driver_url" == *"mega.nz"* ]]; then
+                echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver using megadl"
+                if ! command -v megadl >/dev/null 2>&1; then
+                    run_command "Installing megatools (required for mega.nz downloads)" "info" "apt update && apt install -y megatools"
+                fi
+                megadl "$driver_url"
+            else
+                echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver using wget"
+                wget -O "$driver_filename" "$driver_url"
+            fi
 
             # Check if download is successful
             if [ $? -ne 0 ]; then
@@ -1186,29 +1196,52 @@ case $STEP in
         fi
 
         if [ -n "$URL" ]; then
-            echo -e "${GREEN}[+]${NC} Downloading vGPU host driver using curl"
-            # Extract filename from URL
-            driver_filename=$(extract_filename_from_url "$URL")
-            
-            # Download the file using curl
-            run_command "Downloading $driver_filename" "info" "curl -s -o $driver_filename -L $URL"
-            
-            if [[ "$driver_filename" == *.zip ]]; then
-                # Extract the zip file
-                unzip -q "$driver_filename"
-                # Look for .run file inside
-                run_file=$(find . -name '*.run' -type f -print -quit)
-                if [ -n "$run_file" ]; then
-                    # Map filename to driver version and patch
-                    if map_filename_to_version "$run_file"; then
-                        driver_filename="$run_file"
+            # Download based on URL type
+            if [[ "$URL" == *"mega.nz"* ]]; then
+                echo -e "${GREEN}[+]${NC} Downloading vGPU host driver using megadl"
+                if ! command -v megadl >/dev/null 2>&1; then
+                    run_command "Installing megatools (required for mega.nz downloads)" "info" "apt update && apt install -y megatools"
+                fi
+                # Capture list of existing .run files to detect the new one afterwards
+                before_list=$(ls -1 NVIDIA-Linux-x86_64-*-vgpu-kvm.run 2>/dev/null || true)
+                megadl "$URL"
+                if [ $? -ne 0 ]; then
+                    echo -e "${RED}[!]${NC} Download failed."
+                    exit 1
+                fi
+                # Pick the most recent matching .run file as the downloaded filename
+                driver_filename=$(ls -t NVIDIA-Linux-x86_64-*-vgpu-kvm.run 2>/dev/null | head -n1)
+                if [ -z "$driver_filename" ]; then
+                    echo -e "${RED}[!]${NC} Could not find downloaded .run file from mega.nz URL."
+                    exit 1
+                fi
+            else
+                echo -e "${GREEN}[+]${NC} Downloading vGPU host driver using curl"
+                # Extract filename from URL safely
+                driver_filename=$(basename "$URL" | sed 's/[?#].*$//')
+                run_command "Downloading $driver_filename" "info" "curl -s -o $driver_filename -L $URL"
+                if [ $? -ne 0 ]; then
+                    echo -e "${RED}[!]${NC} Download failed."
+                    exit 1
+                fi
+
+                if [[ "$driver_filename" == *.zip ]]; then
+                    # Extract the zip file
+                    unzip -q "$driver_filename"
+                    # Look for .run file inside
+                    run_file=$(find . -name '*.run' -type f -print -quit)
+                    if [ -n "$run_file" ]; then
+                        # Map filename to driver version and patch
+                        if map_filename_to_version "$run_file"; then
+                            driver_filename="$run_file"
+                        else
+                            echo -e "${RED}[!]${NC} Unrecognized filename inside the zip file. Exiting."
+                            exit 1
+                        fi
                     else
-                        echo -e "${RED}[!]${NC} Unrecognized filename inside the zip file. Exiting."
+                        echo -e "${RED}[!]${NC} No .run file found inside the zip. Exiting."
                         exit 1
                     fi
-                else
-                    echo -e "${RED}[!]${NC} No .run file found inside the zip. Exiting."
-                    exit 1
                 fi
             fi
             
@@ -1408,9 +1441,17 @@ case $STEP in
                 echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
                 
-            # Download and install the selected vGPU driver version
-            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver using wget"
-            wget -O "$driver_filename" "$driver_url"
+# Download and install the selected vGPU driver version
+            if [[ "$driver_url" == *"mega.nz"* ]]; then
+                echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver using megadl"
+                if ! command -v megadl >/dev/null 2>&1; then
+                    run_command "Installing megatools (required for mega.nz downloads)" "info" "apt update && apt install -y megatools"
+                fi
+                megadl "$driver_url"
+            else
+                echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver using wget"
+                wget -O "$driver_filename" "$driver_url"
+            fi
 
             # Check if download is successful
             if [ $? -ne 0 ]; then
@@ -1436,6 +1477,17 @@ case $STEP in
 
         # Make driver executable
         chmod +x $driver_filename
+
+		# Decide install arguments based on driver version (legacy v16.x/v17.x vs new v18.x+)
+        vmajor=${driver_version%%.*}
+        if [[ -z "$vmajor" ]]; then
+            vmajor=0
+        fi
+        if [[ "$vmajor" -lt 18 ]]; then
+            INSTALL_ARGS="--dkms -m=kernel -s"
+        else
+            INSTALL_ARGS="--dkms -s"
+        fi
 
         # Patch and install the driver only if vGPU is not native
         if [ "$VGPU_SUPPORT" = "Yes" ]; then
@@ -1465,11 +1517,11 @@ case $STEP in
                 cat "$VGPU_DIR/patch_error.log"
             fi
             
-            # Run the patched driver installer
-            run_command "Installing patched driver" "info" "./$custom_filename --dkms -s"
+            # Run the patched driver installer with appropriate args
+            run_command "Installing patched driver" "info" "./$custom_filename $INSTALL_ARGS"
         elif [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Unknown" ]; then
-            # Run the regular driver installer
-            run_command "Installing native driver" "info" "./$driver_filename --dkms -s"
+            # Run the regular driver installer with appropriate args
+            run_command "Installing native driver" "info" "./$driver_filename $INSTALL_ARGS"
         else
             echo -e "${RED}[!]${NC} Unknown or unsupported GPU: $VGPU_SUPPORT"
             echo ""
@@ -1526,8 +1578,10 @@ case $STEP in
 
         echo ""
         echo "Step 2 completed and installation process is now finished."
+		echo ""
+		echo "! YOU MAY NEED TO REBOOT YOUR SERVER TO TAKE EFFECT !"
         echo ""
-        echo "List all available mdevs by typing: mdevctl types and choose the one that fits your needs and VRAM capabilities"
+        echo "List all available mdevs by typing: 'mdevctl types' and choose the one that fits your needs and VRAM capabilities"
         echo "Login to your Proxmox server over http/https. Click the VM and go to Hardware."
         echo "Under Add choose PCI Device and assign the desired mdev type to your VM"
         echo ""

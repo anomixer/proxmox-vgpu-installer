@@ -9,8 +9,9 @@ This repository contains a Bash script that configures Proxmox 8 or 9 servers to
 ## Architecture and Core Components
 
 ### Main Scripts
-- `proxmox-installer.sh` - Current installer (v1.5, supports Proxmox 7/8/9, comprehensive driver support)
-- `old/proxmox-installer-v1.4.sh` - Previous version (Proxmox 8/9, driver versions 18.3, 18.4, 19.0, 19.1)
+- `proxmox-installer.sh` - Current installer (v1.51, minor fix for megadl/wget issue)
+- `old/proxmox-installer-v1.5.sh` - Previous version (supports Proxmox 7/8/9, comprehensive driver support)
+- `old/proxmox-installer-v1.4.sh` - Older version (Proxmox 8/9, driver versions 18.3, 18.4, 19.0, 19.1)
 - `old/proxmox-installer-v1.3.sh` - Older version
 - `old/proxmox-installer-v1.2.sh` - Older version
 - `old/proxmox-installer-v1.1.sh` - Original version (supports older driver versions 16.x, 17.0)
@@ -96,7 +97,7 @@ find /sys/kernel/iommu_groups/ -type l
 ## Development Context
 
 ### Driver Version Mapping
-The installer (v1.5) supports these NVIDIA driver versions:
+The installer (v1.51) supports these NVIDIA driver versions:
 
 **v19.x Series** (Native vGPU Only):
 - **19.1**: 580.82.02 (latest, supports RTX PRO 6000 Blackwell Server Edition, patch file not yet available)
@@ -138,7 +139,7 @@ The installer (v1.5) supports these NVIDIA driver versions:
 - **vgpu-proxmox**: GitLab repository containing driver patches
 - **vgpu_unlock-rs**: Rust library enabling vGPU on consumer cards
 - **FastAPI-DLS**: Docker-based license server for vGPU licensing
-- Driver downloads from `alist.homelabproject.cc`
+- Driver downloads from `alist.homelabproject.cc` (v18.3+), legacy links from `mega.nz` (v16.x–v18.1)
 
 ### Proxmox Integration Points
 - Modifies APT repositories (`/etc/apt/sources.list`, `/etc/apt/sources.list.d/`)
@@ -147,7 +148,13 @@ The installer (v1.5) supports these NVIDIA driver versions:
 - Creates systemd service overrides for NVIDIA services
 - Integrates with Proxmox's PCI passthrough system
 
-## Important Implementation Notes
+### Important Implementation Notes
+
+- v1.51 split logic:
+  - Legacy (v16.x–v17.x): mega.nz + megadl; install args `--dkms -m=kernel -s`.
+  - v18.0–v18.1: mega.nz + megadl; install args `--dkms -s`.
+  - v18.3+ and 19.x: alist.homelabproject.cc + wget; install args `--dkms -s`.
+  - Auto-detect download tool by URL; installs megatools on demand.
 
 ### Multi-GPU Handling
 The installer detects multiple GPUs and allows selection of which GPU to configure for vGPU while automatically setting up PCI passthrough for remaining GPUs via UDEV rules.
