@@ -1662,6 +1662,23 @@ case $STEP in
                     available_runs=$(printf '%s\n' "$available_runs" | sed 's/^/    - /')
                     echo -e "${YELLOW}[-]${NC} Installer artifacts detected in $(pwd):\n${available_runs}"
                 fi
+            # Determine the patched installer filename
+            if [ ! -e "$custom_filename" ]; then
+                patched_version="${driver_patch%.patch}"
+                alt_custom_filename="NVIDIA-Linux-x86_64-${patched_version}-vgpu-kvm-custom.run"
+                if [ -n "$driver_patch" ] && [ -e "$alt_custom_filename" ]; then
+                    custom_filename="$alt_custom_filename"
+                else
+                    alt_custom_filename=$(find . -maxdepth 1 -type f -name "NVIDIA-Linux-x86_64-*-vgpu-kvm-custom.run" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')
+                    if [ -n "$alt_custom_filename" ]; then
+                        custom_filename="${alt_custom_filename#./}"
+                    fi
+                fi
+            fi
+
+            if [ ! -e "$custom_filename" ]; then
+                echo -e "${RED}[!]${NC} Patched driver file not found after applying patch."
+                echo -e "${YELLOW}[-]${NC} Check $LOG_FILE for patch output and verify compatibility for $driver_patch."
                 exit 1
             fi
 
