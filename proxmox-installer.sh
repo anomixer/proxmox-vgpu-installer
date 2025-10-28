@@ -2529,6 +2529,8 @@ case $STEP in
                 echo -e "${YELLOW}[-]${NC} No MD5 checksum available for validation."
             fi
 
+            prompt_guest_driver_downloads "$driver_version" "$driver_filename"
+
             exit 0
             ;;
         5)
