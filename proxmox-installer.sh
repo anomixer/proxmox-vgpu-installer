@@ -33,6 +33,32 @@ declare -A DRIVER_NOTES=()
 declare -A DRIVER_BY_FILENAME=()
 declare -A PATCH_OVERRIDES=()
 
+capture_run_artifact_files() {
+    find . -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64-*-vgpu-kvm*.run' -printf '%f\n' 2>/dev/null | LC_ALL=C sort
+}
+
+list_new_run_artifacts() {
+    local pre_snapshot="$1"
+    local post_snapshot="$2"
+    local driver_filename="$3"
+
+    declare -A seen_pre=()
+    while IFS= read -r run_file; do
+        if [ -n "$run_file" ]; then
+            seen_pre["$run_file"]=1
+        fi
+    done <<<"$pre_snapshot"
+
+    while IFS= read -r run_file; do
+        if [ -z "$run_file" ] || [ "$run_file" = "$driver_filename" ]; then
+            continue
+        fi
+        if [ -z "${seen_pre[$run_file]:-}" ]; then
+            printf '%s\n' "$run_file"
+        fi
+    done <<<"$post_snapshot"
+}
+
 load_patch_overrides() {
     if [ ! -f "$PATCH_MAP_FILE" ]; then
         return
@@ -1568,19 +1594,17 @@ case $STEP in
             fi
             # Add custom to original filename
             custom_filename="${driver_filename%.run}-custom.run"
+            custom_backup=""
 
             # Check if $custom_filename exists
             if [ -e "$custom_filename" ]; then
-                mv "$custom_filename" "$custom_filename.bak"
-                echo -e "${YELLOW}[-]${NC} Moved $custom_filename to $custom_filename.bak"
+                custom_backup="${custom_filename}.bak.$(date +%s)"
+                mv "$custom_filename" "$custom_backup"
+                echo -e "${YELLOW}[-]${NC} Moved $custom_filename to $custom_backup"
             fi
 
             # Record existing installer artifacts so we can identify what the patch generated
-            mapfile -t pre_patch_run_files < <(find . -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64-*-vgpu-kvm*.run' -printf '%f\n' 2>/dev/null)
-            declare -A run_file_snapshot=()
-            for run_file in "${pre_patch_run_files[@]}"; do
-                run_file_snapshot["$run_file"]=1
-            done
+            pre_patch_snapshot=$(capture_run_artifact_files)
 
             # Capture original driver metadata in case the patch updates it in place
             original_driver_checksum=""
@@ -1595,23 +1619,13 @@ case $STEP in
             run_command "Patching driver" "info" "./$driver_filename --apply-patch $VGPU_DIR/vgpu-proxmox/$driver_patch"
 
             patched_installer=""
+            post_patch_snapshot=$(capture_run_artifact_files)
 
             # Determine the patched installer filename
             if [ -e "$custom_filename" ]; then
                 patched_installer="$custom_filename"
-                unset run_file_snapshot
             else
-                mapfile -t post_patch_run_files < <(find . -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64-*-vgpu-kvm*.run' -printf '%f\n' 2>/dev/null)
-                new_run_candidates=()
-                for run_file in "${post_patch_run_files[@]}"; do
-                    if [ "$run_file" = "$driver_filename" ]; then
-                        continue
-                    fi
-                    if [ -z "${run_file_snapshot[$run_file]:-}" ]; then
-                        new_run_candidates+=("$run_file")
-                    fi
-                done
-                unset run_file_snapshot
+                mapfile -t new_run_candidates < <(list_new_run_artifacts "$pre_patch_snapshot" "$post_patch_snapshot" "$driver_filename")
 
                 if [ "${#new_run_candidates[@]}" -eq 1 ]; then
                     patched_installer="${new_run_candidates[0]}"
@@ -1634,6 +1648,10 @@ case $STEP in
                 fi
             fi
 
+            if [ -n "$custom_backup" ] && [ -e "$custom_backup" ] && [ -e "$custom_filename" ]; then
+                rm -f "$custom_backup"
+            fi
+
             if { [ -z "$patched_installer" ] || [ ! -e "$patched_installer" ]; } && [ -n "$original_driver_checksum" ]; then
                 if [ -e "$driver_filename" ]; then
                     new_driver_checksum=$(sha256sum "$driver_filename" 2>/dev/null | awk '{print $1}')
@@ -1651,7 +1669,12 @@ case $STEP in
             if [ -z "$patched_installer" ] || [ ! -e "$patched_installer" ]; then
                 echo -e "${RED}[!]${NC} Patched driver file not found after applying patch."
                 echo -e "${YELLOW}[-]${NC} Check $LOG_FILE for patch output and verify compatibility for $driver_patch."
-                available_runs=$(find . -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64-*-vgpu-kvm*.run' -printf '    - %f\n' 2>/dev/null || true)
+                available_runs=""
+                if [ -n "$post_patch_snapshot" ]; then
+                    available_runs=$(printf '%s\n' "$post_patch_snapshot" | sed 's/^/    - /')
+                else
+                    available_runs=$(find . -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64-*-vgpu-kvm*.run' -printf '    - %f\n' 2>/dev/null || true)
+                fi
                 if [ -n "${available_runs:-}" ]; then
                     echo -e "${YELLOW}[-]${NC} Installer artifacts detected in $(pwd):\n${available_runs}"
                 fi
@@ -1661,7 +1684,7 @@ case $STEP in
             # Run the patched driver installer
             chmod +x "$patched_installer"
             run_command "Installing patched driver" "info" "./$patched_installer $install_flags"
-        elif [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Unknown" ]; then
+        elif [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Unknown" ]; then
             # Run the regular driver installer
             run_command "Installing native driver" "info" "./$driver_filename $install_flags"
         else
