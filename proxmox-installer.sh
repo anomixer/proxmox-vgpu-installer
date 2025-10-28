@@ -22,6 +22,7 @@ SECURE_BOOT_KEY="$SECURE_BOOT_DIR/module-signing.key"
 SECURE_BOOT_CERT="$SECURE_BOOT_DIR/module-signing.crt"
 PATCH_MAP_FILE="$SCRIPT_DIR/driver_patches.json"
 FASTAPI_WARNING="${FASTAPI_WARNING:-0}"
+GUEST_DRIVER_TABLE_URL="https://docs.cloud.google.com/compute/docs/gpus/grid-drivers-table"
 
 declare -a DRIVER_ORDER=()
 declare -A DRIVER_LABELS=()
@@ -60,6 +61,300 @@ select_new_run_artifact() {
     done <<<"$post_snapshot"
 
     return 1
+}
+
+strip_trailing_carriage_return() {
+    local value="$1"
+    while [[ "$value" == *$'\r' ]]; do
+        value="${value%$'\r'}"
+    done
+    printf '%s' "$value"
+}
+
+extract_host_version_from_filename() {
+    local filename="$1"
+    local base
+    base=$(basename "$filename")
+    if [[ "$base" =~ NVIDIA-Linux-x86_64-([0-9]+\.[0-9]+\.[0-9]+)-vgpu-kvm ]]; then
+        printf '%s' "${BASH_REMATCH[1]}"
+        return 0
+    fi
+    return 1
+}
+
+resolve_guest_driver_links() {
+    local branch="$1"
+    local host_version="$2"
+
+    GUEST_DRIVER_TABLE_URL="$GUEST_DRIVER_TABLE_URL" python3 - "$branch" "$host_version" <<'PY'
+import html
+import os
+import re
+import sys
+import urllib.error
+import urllib.request
+
+branch = sys.argv[1].strip()
+host_version = sys.argv[2].strip()
+url = os.environ.get("GUEST_DRIVER_TABLE_URL", "https://docs.cloud.google.com/compute/docs/gpus/grid-drivers-table")
+
+def emit(key, value):
+    if value:
+        print(f"{key}={value}")
+
+request = urllib.request.Request(
+    url,
+    headers={
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"
+    },
+)
+
+try:
+    with urllib.request.urlopen(request) as resp:
+        html_data = resp.read().decode("utf-8", "ignore")
+except urllib.error.URLError as exc:
+    emit("error", f"Failed to fetch guest driver catalog: {exc}")
+    sys.exit(0)
+
+rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html_data, re.S)
+
+def clean_text(fragment: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", fragment)
+    text = html.unescape(text)
+    return " ".join(text.split())
+
+def parse_links(fragment: str):
+    anchors = re.findall(r"<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)</a>", fragment, re.S)
+    parsed = []
+    for href, text in anchors:
+        parsed.append((href, clean_text(text)))
+    return parsed
+
+target_row = None
+for row in rows:
+    normalized = clean_text(row)
+    if not normalized:
+        continue
+    if branch and branch in normalized:
+        target_row = row
+        break
+    if host_version and host_version in normalized:
+        target_row = row
+        break
+
+if target_row is None:
+    emit("error", "Unable to locate matching guest driver entry in the Google Cloud catalog")
+    sys.exit(0)
+
+linux_url = ""
+linux_label = ""
+windows_url = ""
+windows_label = ""
+
+WINDOW_EXTENSIONS = (".exe", ".zip", ".msi")
+
+def is_windows_asset(href: str, text: str) -> bool:
+    lowered_href = href.lower()
+    lowered_text = text.lower()
+    if "windows" in lowered_text or "windows" in lowered_href:
+        return True
+    if "win" in lowered_href:
+        return True
+    for ext in WINDOW_EXTENSIONS:
+        if lowered_href.endswith(ext) or f"{ext}?" in lowered_href:
+            return True
+    return False
+
+def is_linux_asset(href: str, text: str) -> bool:
+    lowered_href = href.lower()
+    lowered_text = text.lower()
+    if "linux" in lowered_text:
+        return True
+    if lowered_href.endswith(".run") or ".run?" in lowered_href:
+        return not is_windows_asset(href, text)
+    return False
+
+links = parse_links(target_row)
+filtered_links = [(href, text) for href, text in links if href]
+
+for href, text in filtered_links:
+    if not linux_url and is_linux_asset(href, text):
+        linux_url = href
+        linux_label = text or "Linux guest driver"
+        continue
+    if not windows_url and is_windows_asset(href, text):
+        windows_url = href
+        windows_label = text or "Windows guest driver"
+
+if not windows_url and len(filtered_links) > 1:
+    for href, text in filtered_links:
+        if linux_url and href == linux_url:
+            continue
+        windows_url = href
+        windows_label = text or "Windows guest driver"
+        break
+
+if not linux_url and filtered_links:
+    for href, text in filtered_links:
+        if windows_url and href == windows_url:
+            continue
+        linux_url = href
+        linux_label = text or "Linux guest driver"
+        break
+
+emit("linux", linux_url)
+emit("linux_label", linux_label)
+emit("windows", windows_url)
+emit("windows_label", windows_label)
+PY
+}
+
+download_guest_driver_asset() {
+    local url="$1"
+    local dest_dir="$2"
+    local display_name="$3"
+
+    if [ -z "$url" ]; then
+        return 1
+    fi
+
+    mkdir -p "$dest_dir"
+
+    local filename="${url##*/}"
+    filename="${filename%%\?*}"
+    if [ -z "$filename" ]; then
+        filename=$(echo "${display_name:-guest-driver}" | tr ' /' '__')
+    fi
+
+    local target="$dest_dir/$filename"
+
+    local download_cmd=""
+    if command -v curl >/dev/null 2>&1; then
+        download_cmd="curl -fSL '$url' -o '$target'"
+    elif command -v wget >/dev/null 2>&1; then
+        download_cmd="wget -O '$target' '$url'"
+    else
+        echo -e "${RED}[!]${NC} Neither curl nor wget is available to download guest drivers."
+        return 1
+    fi
+
+    echo -e "${GREEN}[+]${NC} Downloading ${display_name:-guest driver}"
+    if eval "$download_cmd"; then
+        echo -e "${GREEN}[+]${NC} Saved to $target"
+        return 0
+    fi
+
+    echo -e "${RED}[!]${NC} Failed to download ${display_name:-guest driver} from $url"
+    rm -f "$target"
+    return 1
+}
+
+prompt_guest_driver_downloads() {
+    local branch="$1"
+    local driver_filename="$2"
+
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo -e "${YELLOW}[-]${NC} Python 3 is required to parse the Google Cloud guest driver catalog. Install python3 to enable automatic downloads."
+        return
+    fi
+
+    local host_version=""
+    if ! host_version=$(extract_host_version_from_filename "$driver_filename" 2>/dev/null); then
+        echo -e "${YELLOW}[-]${NC} Unable to derive host driver version from $driver_filename for guest driver lookup."
+        host_version=""
+    fi
+
+    local lookup_output
+    lookup_output=$(resolve_guest_driver_links "$branch" "$host_version" || true)
+
+    if [ -z "${lookup_output}" ]; then
+        echo -e "${YELLOW}[-]${NC} Unable to locate guest driver downloads for branch ${branch:-$host_version}."
+        return
+    fi
+
+    local linux_url=""
+    local linux_label=""
+    local windows_url=""
+    local windows_label=""
+    local error_message=""
+
+    while IFS='=' read -r key value; do
+        [ -z "$key" ] && continue
+        case "$key" in
+            linux)
+                linux_url="$value"
+                ;;
+            linux_label)
+                linux_label="$value"
+                ;;
+            windows)
+                windows_url="$value"
+                ;;
+            windows_label)
+                windows_label="$value"
+                ;;
+            error)
+                error_message="$value"
+                ;;
+        esac
+    done <<<"$lookup_output"
+
+    if [ -n "$error_message" ]; then
+        echo -e "${YELLOW}[-]${NC} $error_message"
+        return
+    fi
+
+    if [ -z "$linux_url" ] && [ -z "$windows_url" ]; then
+        echo -e "${YELLOW}[-]${NC} No guest driver download links were published for branch ${branch:-$host_version}."
+        return
+    fi
+
+    local branch_token="${branch:-${host_version:-guest}}"
+    branch_token="${branch_token//[^0-9A-Za-z._-]/_}"
+    local version_token="${host_version//[^0-9A-Za-z._-]/_}"
+    local download_dir="$SCRIPT_DIR/guest-drivers/$branch_token"
+    if [ -n "$version_token" ] && [ "$version_token" != "$branch_token" ]; then
+        download_dir="$SCRIPT_DIR/guest-drivers/${branch_token}_${version_token}"
+    fi
+
+    if [ -n "$linux_url" ]; then
+        local linux_choice
+        read -r -p "$(echo -e "${BLUE}[?]${NC} Download Linux guest drivers now? (y/n): ")" linux_choice || linux_choice=""
+        linux_choice=$(strip_trailing_carriage_return "$linux_choice")
+        if [[ "$linux_choice" =~ ^[Yy]$ ]]; then
+            download_guest_driver_asset "$linux_url" "$download_dir" "${linux_label:-Linux guest driver}" || true
+        else
+            echo -e "${YELLOW}[-]${NC} Skipping Linux guest driver download."
+        fi
+    fi
+
+    if [ -n "$windows_url" ]; then
+        local windows_choice
+        read -r -p "$(echo -e "${BLUE}[?]${NC} Download Windows guest drivers now? (y/n): ")" windows_choice || windows_choice=""
+        windows_choice=$(strip_trailing_carriage_return "$windows_choice")
+        if [[ "$windows_choice" =~ ^[Yy]$ ]]; then
+            download_guest_driver_asset "$windows_url" "$download_dir" "${windows_label:-Windows guest driver}" || true
+        else
+            echo -e "${YELLOW}[-]${NC} Skipping Windows guest driver download."
+        fi
+    fi
+}
+
+download_guest_drivers_interactive() {
+    echo ""
+    echo "Download guest drivers"
+    echo ""
+
+    if ! select_driver_branch false; then
+        return 1
+    fi
+
+    if [ -z "$driver_filename" ]; then
+        echo -e "${YELLOW}[-]${NC} Unable to determine host driver filename for the selected branch."
+        return 1
+    fi
+
+    prompt_guest_driver_downloads "$driver_version" "$driver_filename"
 }
 
 load_patch_overrides() {
@@ -591,7 +886,8 @@ select_driver_branch() {
     fi
 
     echo ""
-    read -p "Enter your choice: " driver_choice
+    read -r -p "Enter your choice: " driver_choice
+    driver_choice=$(strip_trailing_carriage_return "$driver_choice")
 
     local branch="${selection_map[$driver_choice]:-}"
     if [ -z "$branch" ]; then
@@ -746,41 +1042,54 @@ print_guest_driver_guidance() {
     local driver_filename="$2"
 
     if [[ -z "$branch" ]]; then
-        printf "%b\n" "${YELLOW}[-]${NC} Download guest drivers matching host version ${driver_filename} from NVIDIA's enterprise portal."
+        printf "%b\n" "${GREEN}[+]${NC} Guest drivers matching ${driver_filename} can be downloaded automatically via the prompts above or main menu option 5."
         return
     fi
 
-    if [[ "$branch" == 19.* ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} Download the matching vGPU 19.x guest drivers (Windows/Linux) from NVIDIA's enterprise portal."
-    elif [[ "$branch" == 18.* ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} Download the matching vGPU 18.x guest drivers (Windows/Linux) from NVIDIA's enterprise portal."
-    elif [[ "$branch" == "17.4" ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.127.06"
-    elif [[ "$branch" == "17.3" ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.90.05"
-    elif [[ "$branch" == "17.0" ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.54.10"
-        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/NVIDIA-Linux-x86_64-550.54.14-grid.run"
-        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/551.61_grid_win10_win11_server2022_dch_64bit_international.exe"
-    elif [[ "$branch" == "16.4" ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.161.05"
-        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/NVIDIA-Linux-x86_64-535.161.07-grid.run"
-        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/538.33_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
-    elif [[ "$branch" == "16.2" ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.129.03"
-        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/NVIDIA-Linux-x86_64-535.129.03-grid.run"
-        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/537.70_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
-    elif [[ "$branch" == "16.1" ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.104.06"
-        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/NVIDIA-Linux-x86_64-535.104.05-grid.run"
-        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/537.13_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
-    elif [[ "$branch" == "16.0" ]]; then
-        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.54.06"
-        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/NVIDIA-Linux-x86_64-535.54.03-grid.run"
-        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/536.25_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
-    else
-        printf "%b\n" "${YELLOW}[-]${NC} Download guest drivers matching host version ${driver_filename} from NVIDIA's enterprise portal."
-    fi
+    printf "%b\n" "${GREEN}[+]${NC} Guest drivers for branch ${branch} can be downloaded automatically via the prompts above or by choosing main menu option 5 later."
+
+    case "$branch" in
+        19.*)
+            printf "%b\n" "${BLUE}[i]${NC} NVIDIA's enterprise portal still hosts the 19.x catalog if you need an alternate source."
+            ;;
+        18.*)
+            printf "%b\n" "${BLUE}[i]${NC} NVIDIA's enterprise portal remains a fallback for 18.x guest drivers if direct downloads are unavailable."
+            ;;
+        17.4)
+            printf "%b\n" "${BLUE}[i]${NC} Reference guest driver version: 550.127.06"
+            ;;
+        17.3)
+            printf "%b\n" "${BLUE}[i]${NC} Reference guest driver version: 550.90.05"
+            ;;
+        17.0)
+            printf "%b\n" "${BLUE}[i]${NC} Manual download references:"
+            printf "%b\n" "${BLUE}[i]${NC}   Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/NVIDIA-Linux-x86_64-550.54.14-grid.run"
+            printf "%b\n" "${BLUE}[i]${NC}   Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/551.61_grid_win10_win11_server2022_dch_64bit_international.exe"
+            ;;
+        16.4)
+            printf "%b\n" "${BLUE}[i]${NC} Manual download references:"
+            printf "%b\n" "${BLUE}[i]${NC}   Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/NVIDIA-Linux-x86_64-535.161.07-grid.run"
+            printf "%b\n" "${BLUE}[i]${NC}   Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/538.33_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
+            ;;
+        16.2)
+            printf "%b\n" "${BLUE}[i]${NC} Manual download references:"
+            printf "%b\n" "${BLUE}[i]${NC}   Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/NVIDIA-Linux-x86_64-535.129.03-grid.run"
+            printf "%b\n" "${BLUE}[i]${NC}   Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/537.70_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
+            ;;
+        16.1)
+            printf "%b\n" "${BLUE}[i]${NC} Manual download references:"
+            printf "%b\n" "${BLUE}[i]${NC}   Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/NVIDIA-Linux-x86_64-535.104.05-grid.run"
+            printf "%b\n" "${BLUE}[i]${NC}   Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/537.13_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
+            ;;
+        16.0)
+            printf "%b\n" "${BLUE}[i]${NC} Manual download references:"
+            printf "%b\n" "${BLUE}[i]${NC}   Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/NVIDIA-Linux-x86_64-535.54.03-grid.run"
+            printf "%b\n" "${BLUE}[i]${NC}   Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/536.25_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
+            ;;
+        *)
+            printf "%b\n" "${BLUE}[i]${NC} NVIDIA's enterprise portal remains a fallback source if the automated download catalog is unreachable."
+            ;;
+    esac
 }
 
 perform_step_two() {
@@ -1132,6 +1441,8 @@ perform_step_two() {
         echo -e "${YELLOW}[!]${NC} Reminder: Driver branch ${driver_version} requires gridd-unlock patches or nvlts for licensing."
     fi
 
+    prompt_guest_driver_downloads "$driver_version" "$driver_filename"
+
     # Provide guest driver guidance without relying on nested case blocks to avoid parser issues on older bash releases
     print_guest_driver_guidance "$driver_version" "$driver_filename"
 
@@ -1179,10 +1490,12 @@ case $STEP in
     echo "2) Upgrade vGPU installation"
     echo "3) Remove vGPU installation"
     echo "4) Download vGPU drivers"
-    echo "5) License vGPU"
-    echo "6) Exit"
+    echo "5) Download guest drivers"
+    echo "6) License vGPU"
+    echo "7) Exit"
     echo ""
-    read -p "Enter your choice: " choice
+    read -r -p "Enter your choice: " choice
+    choice=$(strip_trailing_carriage_return "$choice")
 
     case $choice in
         1|2)
@@ -1750,23 +2063,29 @@ case $STEP in
 
             exit 0
             ;;
-        5)  
-            echo ""
-            echo "This will setup a FastAPI-DLS Nvidia vGPU licensing server on this Proxmox server"         
-            echo ""
-
-            configure_fastapi_dls
-            
+        5)
+            if ! download_guest_drivers_interactive; then
+                exit 1
+            fi
             exit 0
             ;;
         6)
+            echo ""
+            echo "This will setup a FastAPI-DLS Nvidia vGPU licensing server on this Proxmox server"
+            echo ""
+
+            configure_fastapi_dls
+
+            exit 0
+            ;;
+        7)
             echo ""
             echo "Exiting script."
             exit 0
             ;;
         *)
             echo ""
-            echo "Invalid choice. Please enter 1, 2, 3, 4, 5 or 6."
+            echo "Invalid choice. Please enter 1, 2, 3, 4, 5, 6 or 7."
             echo ""
             ;;
         esac
