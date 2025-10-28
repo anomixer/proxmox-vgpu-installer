@@ -22,8 +22,6 @@ SECURE_BOOT_KEY="$SECURE_BOOT_DIR/module-signing.key"
 SECURE_BOOT_CERT="$SECURE_BOOT_DIR/module-signing.crt"
 PATCH_MAP_FILE="$SCRIPT_DIR/driver_patches.json"
 FASTAPI_WARNING="${FASTAPI_WARNING:-0}"
-GUEST_DRIVER_TABLE_URL="https://docs.cloud.google.com/compute/docs/gpus/grid-drivers-table"
-
 declare -a DRIVER_ORDER=()
 declare -A DRIVER_LABELS=()
 declare -A DRIVER_FILES=()
@@ -33,6 +31,149 @@ declare -A DRIVER_PATCHES=()
 declare -A DRIVER_NOTES=()
 declare -A DRIVER_BY_FILENAME=()
 declare -A PATCH_OVERRIDES=()
+declare -A HOST_VERSION_TO_BRANCH=()
+declare -A GUEST_LINUX_DRIVERS=()
+declare -A GUEST_LINUX_LABELS=()
+declare -A GUEST_WINDOWS_DRIVERS=()
+declare -A GUEST_WINDOWS_LABELS=()
+
+register_guest_driver() {
+    local branch="$1"
+    local linux_url="$2"
+    local windows_url="$3"
+    local linux_label="${4:-}"
+    local windows_label="${5:-}"
+
+    branch="${branch//[$'\r\n\t ']/}"
+    [ -z "$branch" ] && return
+
+    if [ -n "$linux_url" ]; then
+        GUEST_LINUX_DRIVERS["$branch"]="$linux_url"
+        if [ -z "$linux_label" ]; then
+            linux_label="${linux_url##*/}"
+        fi
+        GUEST_LINUX_LABELS["$branch"]="$linux_label"
+    fi
+
+    if [ -n "$windows_url" ]; then
+        GUEST_WINDOWS_DRIVERS["$branch"]="$windows_url"
+        if [ -z "$windows_label" ]; then
+            windows_label="${windows_url##*/}"
+        fi
+        GUEST_WINDOWS_LABELS["$branch"]="$windows_label"
+    fi
+}
+
+load_static_guest_driver_catalog() {
+    while IFS='|' read -r branch linux_url windows_url; do
+        [ -z "$branch" ] && continue
+        register_guest_driver "$branch" "$linux_url" "$windows_url"
+    done <<'CATALOG'
+19.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.1/NVIDIA-Linux-x86_64-580.82.07-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.1/581.15_grid_win10_win11_server2022_dch_64bit_international.exe
+19.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.0/NVIDIA-Linux-x86_64-580.65.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.0/580.88_grid_win10_win11_server2022_dch_64bit_international.exe
+18.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.4/NVIDIA-Linux-x86_64-570.172.08-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.4/573.48_grid_win10_win11_server2022_dch_64bit_international.exe
+18.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.3/NVIDIA-Linux-x86_64-570.158.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.3/573.39_grid_win10_win11_server2022_dch_64bit_international.exe
+18.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.2/NVIDIA-Linux-x86_64-570.148.08-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.2/573.07_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+18.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.1/NVIDIA-Linux-x86_64-570.133.20-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.1/572.83_grid_win10_win11_server2022_dch_64bit_international.exe
+18.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.0/NVIDIA-Linux-x86_64-570.124.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.0/572.60_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+17.6|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.6/NVIDIA-Linux-x86_64-550.163.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.6/553.74_grid_win10_win11_server2022_dch_64bit_international.exe
+17.5|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.5/NVIDIA-Linux-x86_64-550.144.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.5/553.62_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+17.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.4/NVIDIA-Linux-x86_64-550.127.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.4/553.24_grid_win10_win11_server2022_dch_64bit_international.exe
+17.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.3/NVIDIA-Linux-x86_64-550.90.07-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.3/552.74_grid_win10_win11_server2022_dch_64bit_international.exe
+17.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.2/NVIDIA-Linux-x86_64-550.90.07-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.2/552.55_grid_win10_win11_server2022_dch_64bit_international.exe
+17.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.1/NVIDIA-Linux-x86_64-550.54.15-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.1/551.78_grid_win10_win11_server2022_dch_64bit_international.exe
+17.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/NVIDIA-Linux-x86_64-550.54.14-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/551.61_grid_win10_win11_server2022_dch_64bit_international.exe
+16.11|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.11/NVIDIA-Linux-x86_64-535.261.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.11/539.41_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.10|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.10/NVIDIA-Linux-x86_64-535.247.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.10/539.28_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.9|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.9/NVIDIA-Linux-x86_64-535.230.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.9/539.19_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.8|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.8/NVIDIA-Linux-x86_64-535.216.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.8/538.95_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.7|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.7/NVIDIA-Linux-x86_64-535.183.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.7/538.78_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.6|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.6/NVIDIA-Linux-x86_64-535.183.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.6/538.67_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.5|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.5/NVIDIA-Linux-x86_64-535.161.08-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.5/538.46_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/NVIDIA-Linux-x86_64-535.161.07-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/538.33_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.3/NVIDIA-Linux-x86_64-535.154.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.3/538.15_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/NVIDIA-Linux-x86_64-535.129.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/537.70_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/NVIDIA-Linux-x86_64-535.104.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/537.13_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/NVIDIA-Linux-x86_64-535.54.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/536.25_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+15.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.4/NVIDIA-Linux-x86_64-525.147.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.4/529.19_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+15.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.3/NVIDIA-Linux-x86_64-525.125.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.3/529.11_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+15.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.2/NVIDIA-Linux-x86_64-525.105.17-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.2/528.89_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+15.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.1/NVIDIA-Linux-x86_64-525.85.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.1/528.24_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+15.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.0/NVIDIA-Linux-x86_64-525.60.13-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.0/527.41_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+14.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.4/NVIDIA-Linux-x86_64-510.108.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.4/514.08_grid_win10_win11_server2019_server2022_64bit_international.exe
+14.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.3/NVIDIA-Linux-x86_64-510.108.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.3/513.91_grid_win10_win11_server2019_server2022_64bit_international.exe
+14.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.2/NVIDIA-Linux-x86_64-510.85.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.2/513.46_grid_win10_win11_server2019_server2022_64bit_international.exe
+14.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.1/NVIDIA-Linux-x86_64-510.73.08-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.1/512.78_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+14.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.0/NVIDIA-Linux-x86_64-510.47.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.0/511.65_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.12|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.12/NVIDIA-Linux-x86_64-470.256.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.12/475.14_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.11|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.11/NVIDIA-Linux-x86_64-470.256.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.11/475.06_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.10|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.10/NVIDIA-Linux-x86_64-470.239.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.10/474.82_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.9|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.9/NVIDIA-Linux-x86_64-470.223.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.9/474.64_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.8|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.8/NVIDIA-Linux-x86_64-470.199.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.8/474.44_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.7|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.7/NVIDIA-Linux-x86_64-470.182.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.7/474.30_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.6|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.6/NVIDIA-Linux-x86_64-470.161.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.6/474.14_grid_win10_win11_server2019_server2022_64bit_international.exe
+13.5|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.5/NVIDIA-Linux-x86_64-470.161.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.5/474.04_grid_win10_win11_server2019_server2022_64bit_international.exe
+13.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.4/NVIDIA-Linux-x86_64-470.141.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.4/473.81_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.3/NVIDIA-Linux-x86_64-470.129.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.3/473.47_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.2/NVIDIA-Linux-x86_64-470.103.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.2/472.98_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.1/NVIDIA-Linux-x86_64-470.82.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.1/472.39_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.0/NVIDIA-Linux-x86_64-470.63.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.0/471.68_grid_win10_server2016_server2019_server2022_64bit_international.exe
+12.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.4/NVIDIA-Linux-x86_64-460.106.00-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.4/463.15_grid_win10_server2016_server2019_64bit_international.exe
+12.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.3/NVIDIA-Linux-x86_64-460.91.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.3/462.96_grid_win10_server2016_server2019_64bit_international.exe
+12.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.2/NVIDIA-Linux-x86_64-460.73.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.2/462.31_grid_win10_server2016_server2019_64bit_international.exe
+12.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.1/NVIDIA-Linux-x86_64-460.32.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.1/461.33_grid_win10_server2016_server2019_64bit_international.exe
+12.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.0/NVIDIA-Linux-x86_64-460.32.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.0/461.09_grid_win10_server2016_server2019_64bit_international.exe
+11.13|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.13/NVIDIA-Linux-x86_64-450.248.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.13/454.23_grid_win10_server2016_server2019_64bit_international.exe
+11.12|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.12/NVIDIA-Linux-x86_64-450.236.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.12/454.14_grid_win10_server2016_server2019_64bit_international.exe
+11.11|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.11/NVIDIA-Linux-x86_64-450.216.04-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.11/454.02_grid_win10_server2019_64bit_international.exe
+11.10|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.10/NVIDIA-Linux-x86_64-450.216.04-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.10/453.94_grid_win10_server2019_64bit_international.exe
+11.9|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.9/NVIDIA-Linux-x86_64-450.203.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.9/453.64_grid_win10_server2016_server2019_64bit_international.exe
+11.8|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.8/NVIDIA-Linux-x86_64-450.191.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.8/453.51_grid_win10_server2016_server2019_64bit_international.exe
+11.7|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.7/NVIDIA-Linux-x86_64-450.172.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.7/453.37_grid_win10_server2016_server2019_64bit_international.exe
+11.6|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.6/NVIDIA-Linux-x86_64-450.156.00-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.6/453.23_grid_win10_server2016_server2019_64bit_international.exe
+11.5|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.5/NVIDIA-Linux-x86_64-450.142.00-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.5/453.10_grid_win10_server2016_server2019_64bit_international.exe
+11.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.4/NVIDIA-Linux-x86_64-450.119.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.4/452.96_grid_win10_server2016_server2019_64bit_international.exe
+11.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.3/NVIDIA-Linux-x86_64-450.102.04-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.3/452.77_grid_win10_server2016_server2019_64bit_international.exe
+11.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.2/NVIDIA-Linux-x86_64-450.89-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.2/452.57_grid_win10_server2016_server2019_64bit_international.exe
+11.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.1/NVIDIA-Linux-x86_64-450.80.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.1/452.39_grid_win10_server2016_server2019_64bit_international.exe
+11.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.0/NVIDIA-Linux-x86_64-450.51.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID11.0/451.48_grid_win10_server2016_server2019_64bit_international.exe
+10.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.4/NVIDIA-Linux-x86_64-440.118.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.4/443.66_grid_win10_server2016_server2019_64bit_international.exe
+10.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.3/NVIDIA-Linux-x86_64-440.107-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.3/443.46_grid_win10_server2016_server2019_64bit_international.exe
+10.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.2/NVIDIA-Linux-x86_64-440.87-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.2/443.05_grid_win10_server2016_server2019_64bit_international.exe
+10.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.1/NVIDIA-Linux-x86_64-440.56-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.1/442.06_grid_win10_server2016_server2019_64bit_international.exe
+10.0.jenkins|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.0.jenkins/NVIDIA-Linux-x86_64-440.43-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID10.0.jenkins/441.66_grid_win10_server2016_server2019_64bit_international.exe
+9.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.4/NVIDIA-Linux-x86_64-430.99-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.4/432.44_grid_win10_server2016_server2019_64bit_international.exe
+9.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.3/NVIDIA-Linux-x86_64-430.83-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.3/432.33_grid_win10_server2016_server2019_64bit_international.exe
+9.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.2/NVIDIA-Linux-x86_64-430.63-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.2/432.08_grid_win10_server2016_server2019_64bit_international.exe
+9.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.1/NVIDIA-Linux-x86_64-430.46-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.1/431.79_grid_win10_server2016_server2019_64bit_international.exe
+9.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.0/NVIDIA-Linux-x86_64-430.30-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.0/431.02_grid_win10_server2016_server2019_64bit_international.exe
+8.10|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.10/NVIDIA-Linux-x86_64-418.240-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.10/427.71_grid_win10_server2016_server2019_64bit_international.exe
+8.9|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.9/NVIDIA-Linux-x86_64-418.226.00-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.9/427.60_grid_win10_server2016_server2019_64bit_international.exe
+8.7|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.7/NVIDIA-Linux-x86_64-418.197.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.7/427.27_grid_win10_server2016_server2019_64bit_international.exe
+8.6|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.6/NVIDIA-Linux-x86_64-418.181.07-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.6/427.11_grid_win10_server2016_server2019_64bit_international.exe
+8.5|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.5/NVIDIA-Linux-x86_64-418.165.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.5/426.94_grid_win10_server2016_server2019_64bit_international.exe
+8.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.4/NVIDIA-Linux-x86_64-418.149-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.4/426.72_grid_win10_server2016_server2019_64bit_international.exe
+8.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.3/NVIDIA-Linux-x86_64-418.130-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.3/426.52_grid_win10_server2016_server2019_64bit_international.exe
+8.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.2/NVIDIA-Linux-x86_64-418.109-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.2/426.26_grid_win10_server2016_server2019_64bit_international.exe
+8.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.1/NVIDIA-Linux-x86_64-418.92-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.1/426.04_grid_win10_server2016_server2019_64bit_international.exe
+8.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.0/NVIDIA-Linux-x86_64-418.70-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID8.0/425.31_grid_win10_server2016_64bit_international.exe
+7.5|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.5/NVIDIA-Linux-x86_64-410.141-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.5/412.47_grid_win10_server2016_64bit_international.exe
+7.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.4/NVIDIA-Linux-x86_64-410.137-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.4/412.45_grid_win10_server2016_64bit_international.exe
+7.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.3/NVIDIA-Linux-x86_64-410.122-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.3/412.38_grid_win10_server2016_64bit_international.exe
+7.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.2/NVIDIA-Linux-x86_64-410.107-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.2/412.31_grid_win10_server2016_64bit_international.exe
+7.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.1/NVIDIA-Linux-x86_64-410.92-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.1/412.16_grid_win10_server2016_64bit_international.exe
+7.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.0/NVIDIA-Linux-x86_64-410.71-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID7.0/411.81_grid_win10_server2016_64bit_international.exe
+6.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.4/NVIDIA-Linux-x86_64-390.115-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.4/392.37_grid_win10_server2016_64bit_international.exe
+6.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.3/NVIDIA-Linux-x86_64-390.96-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.3/392.05_grid_win10_server2016_64bit_international.exe
+6.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.2/NVIDIA-Linux-x86_64-390.75-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.2/391.81_grid_win10_server2016_64bit_international.exe
+6.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.1/NVIDIA-Linux-x86_64-390.57-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.1/391.58_grid_win10_server2016_64bit_international.exe
+6.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.0/NVIDIA-Linux-x86_64-390.42-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID6.0/391.03_grid_win10_server2016_64bit_international.exe
+5.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID5.4/NVIDIA-Linux-x86_64-384.155-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID5.4/386.57_grid_win10_server2016_64bit_international.exe
+5.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID5.3/NVIDIA-Linux-x86_64-384.137-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID5.3/386.37_grid_win10_server2016_64bit_international.exe
+CATALOG
+}
+
+load_static_guest_driver_catalog
 
 snapshot_run_artifacts() {
     find . -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64-*-vgpu-kvm*.run' -printf '%f\n' 2>/dev/null | LC_ALL=C sort
@@ -86,127 +227,45 @@ resolve_guest_driver_links() {
     local branch="$1"
     local host_version="$2"
 
-    GUEST_DRIVER_TABLE_URL="$GUEST_DRIVER_TABLE_URL" python3 - "$branch" "$host_version" <<'PY'
-import html
-import os
-import re
-import sys
-import urllib.error
-import urllib.request
+    branch="${branch//[$'\r\n\t ']/}"
+    host_version="${host_version//[$'\r\n\t ']/}"
 
-branch = sys.argv[1].strip()
-host_version = sys.argv[2].strip()
-url = os.environ.get("GUEST_DRIVER_TABLE_URL", "https://docs.cloud.google.com/compute/docs/gpus/grid-drivers-table")
+    local resolved_branch=""
 
-def emit(key, value):
-    if value:
-        print(f"{key}={value}")
+    if [ -n "$branch" ]; then
+        if [ -n "${GUEST_LINUX_DRIVERS[$branch]:-}" ] || [ -n "${GUEST_WINDOWS_DRIVERS[$branch]:-}" ]; then
+            resolved_branch="$branch"
+        fi
+    fi
 
-request = urllib.request.Request(
-    url,
-    headers={
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"
-    },
-)
+    if [ -z "$resolved_branch" ] && [ -n "$host_version" ]; then
+        local mapped_branch="${HOST_VERSION_TO_BRANCH[$host_version]:-}"
+        if [ -n "$mapped_branch" ]; then
+            if [ -n "${GUEST_LINUX_DRIVERS[$mapped_branch]:-}" ] || [ -n "${GUEST_WINDOWS_DRIVERS[$mapped_branch]:-}" ]; then
+                resolved_branch="$mapped_branch"
+            fi
+        fi
+    fi
 
-try:
-    with urllib.request.urlopen(request) as resp:
-        html_data = resp.read().decode("utf-8", "ignore")
-except urllib.error.URLError as exc:
-    emit("error", f"Failed to fetch guest driver catalog: {exc}")
-    sys.exit(0)
+    if [ -z "$resolved_branch" ]; then
+        echo "error=No guest driver catalog entry for branch ${branch:-$host_version}"
+        return 0
+    fi
 
-rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html_data, re.S)
+    local linux_url="${GUEST_LINUX_DRIVERS[$resolved_branch]:-}"
+    local linux_label="${GUEST_LINUX_LABELS[$resolved_branch]:-}"
+    local windows_url="${GUEST_WINDOWS_DRIVERS[$resolved_branch]:-}"
+    local windows_label="${GUEST_WINDOWS_LABELS[$resolved_branch]:-}"
 
-def clean_text(fragment: str) -> str:
-    text = re.sub(r"<[^>]+>", " ", fragment)
-    text = html.unescape(text)
-    return " ".join(text.split())
+    if [ -n "$linux_url" ]; then
+        echo "linux=$linux_url"
+        [ -n "$linux_label" ] && echo "linux_label=$linux_label"
+    fi
 
-def parse_links(fragment: str):
-    anchors = re.findall(r"<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)</a>", fragment, re.S)
-    parsed = []
-    for href, text in anchors:
-        parsed.append((html.unescape(href), clean_text(text)))
-    return parsed
-
-target_row = None
-for row in rows:
-    normalized = clean_text(row)
-    if not normalized:
-        continue
-    if branch and branch in normalized:
-        target_row = row
-        break
-    if host_version and host_version in normalized:
-        target_row = row
-        break
-
-if target_row is None:
-    emit("error", "Unable to locate matching guest driver entry in the Google Cloud catalog")
-    sys.exit(0)
-
-linux_url = ""
-linux_label = ""
-windows_url = ""
-windows_label = ""
-
-WINDOW_EXTENSIONS = (".exe", ".zip", ".msi", ".cab", ".msu", ".iso")
-
-def is_windows_asset(href: str, text: str) -> bool:
-    lowered_href = href.lower()
-    lowered_text = text.lower()
-    if "windows" in lowered_text or "windows" in lowered_href:
-        return True
-    if "win" in lowered_href or "win" in lowered_text:
-        return True
-    for ext in WINDOW_EXTENSIONS:
-        if lowered_href.endswith(ext) or f"{ext}?" in lowered_href:
-            return True
-    return False
-
-def is_linux_asset(href: str, text: str) -> bool:
-    lowered_href = href.lower()
-    lowered_text = text.lower()
-    if "linux" in lowered_text:
-        return True
-    if lowered_href.endswith(".run") or ".run?" in lowered_href:
-        return not is_windows_asset(href, text)
-    return False
-
-links = parse_links(target_row)
-filtered_links = [(href, text) for href, text in links if href]
-
-for href, text in filtered_links:
-    if not linux_url and is_linux_asset(href, text):
-        linux_url = href
-        linux_label = text or "Linux guest driver"
-        continue
-    if not windows_url and is_windows_asset(href, text):
-        windows_url = href
-        windows_label = text or "Windows guest driver"
-
-if not windows_url and len(filtered_links) > 1:
-    for href, text in filtered_links:
-        if linux_url and href == linux_url:
-            continue
-        windows_url = href
-        windows_label = text or "Windows guest driver"
-        break
-
-if not linux_url and filtered_links:
-    for href, text in filtered_links:
-        if windows_url and href == windows_url:
-            continue
-        linux_url = href
-        linux_label = text or "Linux guest driver"
-        break
-
-emit("linux", linux_url)
-emit("linux_label", linux_label)
-emit("windows", windows_url)
-emit("windows_label", windows_label)
-PY
+    if [ -n "$windows_url" ]; then
+        echo "windows=$windows_url"
+        [ -n "$windows_label" ] && echo "windows_label=$windows_label"
+    fi
 }
 
 download_guest_driver_asset() {
@@ -228,20 +287,21 @@ download_guest_driver_asset() {
 
     local target="$dest_dir/$filename"
 
-    local download_cmd=""
+    echo -e "${GREEN}[+]${NC} Downloading ${display_name:-guest driver}"
+
     if command -v curl >/dev/null 2>&1; then
-        download_cmd="curl -fSL '$url' -o '$target'"
+        if curl -fSL "$url" -o "$target"; then
+            echo -e "${GREEN}[+]${NC} Saved to $target"
+            return 0
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        download_cmd="wget -O '$target' '$url'"
+        if wget -O "$target" "$url"; then
+            echo -e "${GREEN}[+]${NC} Saved to $target"
+            return 0
+        fi
     else
         echo -e "${RED}[!]${NC} Neither curl nor wget is available to download guest drivers."
         return 1
-    fi
-
-    echo -e "${GREEN}[+]${NC} Downloading ${display_name:-guest driver}"
-    if eval "$download_cmd"; then
-        echo -e "${GREEN}[+]${NC} Saved to $target"
-        return 0
     fi
 
     echo -e "${RED}[!]${NC} Failed to download ${display_name:-guest driver} from $url"
@@ -252,11 +312,6 @@ download_guest_driver_asset() {
 prompt_guest_driver_downloads() {
     local branch="$1"
     local driver_filename="$2"
-
-    if ! command -v python3 >/dev/null 2>&1; then
-        echo -e "${YELLOW}[-]${NC} Python 3 is required to parse the Google Cloud guest driver catalog. Install python3 to enable automatic downloads."
-        return
-    fi
 
     local host_version=""
     if ! host_version=$(extract_host_version_from_filename "$driver_filename" 2>/dev/null); then
@@ -484,6 +539,15 @@ register_driver() {
 
     if [ -n "$filename" ] && [ -z "${DRIVER_BY_FILENAME[$filename]:-}" ]; then
         DRIVER_BY_FILENAME["$filename"]="$branch"
+    fi
+
+    if [ -n "$filename" ]; then
+        local host_version_lookup=""
+        if host_version_lookup=$(extract_host_version_from_filename "$filename" 2>/dev/null); then
+            if [ -z "${HOST_VERSION_TO_BRANCH[$host_version_lookup]:-}" ]; then
+                HOST_VERSION_TO_BRANCH["$host_version_lookup"]="$branch"
+            fi
+        fi
     fi
 }
 
@@ -1305,29 +1369,33 @@ perform_step_two() {
                 echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
 
-            download_command=""
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+
             if [[ "$driver_url" == https://mega.nz/* ]]; then
-                if command -v megadl >/dev/null 2>&1; then
-                    download_command="megadl '$driver_url'"
-                else
+                if ! command -v megadl >/dev/null 2>&1; then
                     echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+
+                if ! megadl "$driver_url"; then
+                    echo -e "${RED}[!]${NC} Download failed."
                     exit 1
                 fi
             else
                 if command -v curl >/dev/null 2>&1; then
-                    download_command="curl -fSL '$driver_url' -o '$driver_filename'"
+                    if ! curl -fSL "$driver_url" -o "$driver_filename"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 elif command -v wget >/dev/null 2>&1; then
-                    download_command="wget -O '$driver_filename' '$driver_url'"
+                    if ! wget -O "$driver_filename" "$driver_url"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 else
                     echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
                     exit 1
                 fi
-            fi
-
-            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-            if ! eval "$download_command"; then
-                echo -e "${RED}[!]${NC} Download failed."
-                exit 1
             fi
 
             if [ -n "$md5" ]; then
@@ -1722,29 +1790,33 @@ perform_step_two() {
                 echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
 
-            download_command=""
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+
             if [[ "$driver_url" == https://mega.nz/* ]]; then
-                if command -v megadl >/dev/null 2>&1; then
-                    download_command="megadl '$driver_url'"
-                else
+                if ! command -v megadl >/dev/null 2>&1; then
                     echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+
+                if ! megadl "$driver_url"; then
+                    echo -e "${RED}[!]${NC} Download failed."
                     exit 1
                 fi
             else
                 if command -v curl >/dev/null 2>&1; then
-                    download_command="curl -fSL '$driver_url' -o '$driver_filename'"
+                    if ! curl -fSL "$driver_url" -o "$driver_filename"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 elif command -v wget >/dev/null 2>&1; then
-                    download_command="wget -O '$driver_filename' '$driver_url'"
+                    if ! wget -O "$driver_filename" "$driver_url"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 else
                     echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
                     exit 1
                 fi
-            fi
-
-            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-            if ! eval "$download_command"; then
-                echo -e "${RED}[!]${NC} Download failed."
-                exit 1
             fi
 
             if [ -n "$md5" ]; then
@@ -2486,29 +2558,33 @@ case $STEP in
                 echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
 
-            download_command=""
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+
             if [[ "$driver_url" == https://mega.nz/* ]]; then
-                if command -v megadl >/dev/null 2>&1; then
-                    download_command="megadl '$driver_url'"
-                else
+                if ! command -v megadl >/dev/null 2>&1; then
                     echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+
+                if ! megadl "$driver_url"; then
+                    echo -e "${RED}[!]${NC} Download failed."
                     exit 1
                 fi
             else
                 if command -v curl >/dev/null 2>&1; then
-                    download_command="curl -fSL '$driver_url' -o '$driver_filename'"
+                    if ! curl -fSL "$driver_url" -o "$driver_filename"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 elif command -v wget >/dev/null 2>&1; then
-                    download_command="wget -O '$driver_filename' '$driver_url'"
+                    if ! wget -O "$driver_filename" "$driver_url"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 else
                     echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
                     exit 1
                 fi
-            fi
-
-            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-            if ! eval "$download_command"; then
-                echo -e "${RED}[!]${NC} Download failed."
-                exit 1
             fi
 
             if [ -n "$md5" ]; then
