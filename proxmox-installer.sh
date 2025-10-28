@@ -92,7 +92,9 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+from html.parser import HTMLParser
 
 branch = sys.argv[1].strip()
 host_version = sys.argv[2].strip()
@@ -123,12 +125,53 @@ def clean_text(fragment: str) -> str:
     text = html.unescape(text)
     return " ".join(text.split())
 
+class AnchorCollector(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.links = []
+        self._current_href = None
+        self._current_text = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != "a":
+            return
+        href = ""
+        for key, value in attrs:
+            if key.lower() == "href" and value:
+                href = html.unescape(value)
+                break
+        self._current_href = href
+        self._current_text = []
+
+    def handle_data(self, data):
+        if self._current_href is None:
+            return
+        if data:
+            self._current_text.append(data)
+
+    def handle_endtag(self, tag):
+        if tag.lower() != "a":
+            return
+        if self._current_href is not None:
+            text = "".join(self._current_text)
+            self.links.append((self._current_href, clean_text(text)))
+        self._current_href = None
+        self._current_text = []
+
+    def handle_entityref(self, name):
+        self.handle_data(html.unescape(f"&{name};"))
+
+    def handle_charref(self, name):
+        if name.startswith("x") or name.startswith("X"):
+            codepoint = int(name[1:], 16)
+        else:
+            codepoint = int(name, 10)
+        self.handle_data(chr(codepoint))
+
 def parse_links(fragment: str):
-    anchors = re.findall(r"<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)</a>", fragment, re.S)
-    parsed = []
-    for href, text in anchors:
-        parsed.append((html.unescape(href), clean_text(text)))
-    return parsed
+    parser = AnchorCollector()
+    parser.feed(fragment)
+    return parser.links
 
 target_row = None
 for row in rows:
@@ -175,7 +218,13 @@ def is_linux_asset(href: str, text: str) -> bool:
     return False
 
 links = parse_links(target_row)
-filtered_links = [(href, text) for href, text in links if href]
+filtered_links = []
+for href, text in links:
+    if not href:
+        continue
+    if href.startswith("//"):
+        href = "https:" + href
+    filtered_links.append((href, text))
 
 for href, text in filtered_links:
     if not linux_url and is_linux_asset(href, text):
@@ -201,6 +250,24 @@ if not linux_url and filtered_links:
         linux_url = href
         linux_label = text or "Linux guest driver"
         break
+
+if not linux_url or not windows_url:
+    raw_urls = re.findall(r"https?://[^\s\"'>]+", target_row)
+    for raw_url in raw_urls:
+        candidate = html.unescape(raw_url)
+        candidate = candidate.rstrip(')];,\'"')
+        parsed = urllib.parse.urlparse(candidate)
+        normalized = urllib.parse.urlunparse(parsed)
+
+        if not linux_url and is_linux_asset(normalized, normalized):
+            linux_url = normalized
+            linux_label = linux_label or "Linux guest driver"
+        elif not windows_url and is_windows_asset(normalized, normalized):
+            windows_url = normalized
+            windows_label = windows_label or "Windows guest driver"
+
+        if linux_url and windows_url:
+            break
 
 emit("linux", linux_url)
 emit("linux_label", linux_label)
@@ -228,20 +295,21 @@ download_guest_driver_asset() {
 
     local target="$dest_dir/$filename"
 
-    local download_cmd=""
+    echo -e "${GREEN}[+]${NC} Downloading ${display_name:-guest driver}"
+
     if command -v curl >/dev/null 2>&1; then
-        download_cmd="curl -fSL '$url' -o '$target'"
+        if curl -fSL "$url" -o "$target"; then
+            echo -e "${GREEN}[+]${NC} Saved to $target"
+            return 0
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        download_cmd="wget -O '$target' '$url'"
+        if wget -O "$target" "$url"; then
+            echo -e "${GREEN}[+]${NC} Saved to $target"
+            return 0
+        fi
     else
         echo -e "${RED}[!]${NC} Neither curl nor wget is available to download guest drivers."
         return 1
-    fi
-
-    echo -e "${GREEN}[+]${NC} Downloading ${display_name:-guest driver}"
-    if eval "$download_cmd"; then
-        echo -e "${GREEN}[+]${NC} Saved to $target"
-        return 0
     fi
 
     echo -e "${RED}[!]${NC} Failed to download ${display_name:-guest driver} from $url"
@@ -1305,29 +1373,33 @@ perform_step_two() {
                 echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
 
-            download_command=""
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+
             if [[ "$driver_url" == https://mega.nz/* ]]; then
-                if command -v megadl >/dev/null 2>&1; then
-                    download_command="megadl '$driver_url'"
-                else
+                if ! command -v megadl >/dev/null 2>&1; then
                     echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+
+                if ! megadl "$driver_url"; then
+                    echo -e "${RED}[!]${NC} Download failed."
                     exit 1
                 fi
             else
                 if command -v curl >/dev/null 2>&1; then
-                    download_command="curl -fSL '$driver_url' -o '$driver_filename'"
+                    if ! curl -fSL "$driver_url" -o "$driver_filename"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 elif command -v wget >/dev/null 2>&1; then
-                    download_command="wget -O '$driver_filename' '$driver_url'"
+                    if ! wget -O "$driver_filename" "$driver_url"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 else
                     echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
                     exit 1
                 fi
-            fi
-
-            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-            if ! eval "$download_command"; then
-                echo -e "${RED}[!]${NC} Download failed."
-                exit 1
             fi
 
             if [ -n "$md5" ]; then
@@ -1722,29 +1794,33 @@ perform_step_two() {
                 echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
 
-            download_command=""
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+
             if [[ "$driver_url" == https://mega.nz/* ]]; then
-                if command -v megadl >/dev/null 2>&1; then
-                    download_command="megadl '$driver_url'"
-                else
+                if ! command -v megadl >/dev/null 2>&1; then
                     echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+
+                if ! megadl "$driver_url"; then
+                    echo -e "${RED}[!]${NC} Download failed."
                     exit 1
                 fi
             else
                 if command -v curl >/dev/null 2>&1; then
-                    download_command="curl -fSL '$driver_url' -o '$driver_filename'"
+                    if ! curl -fSL "$driver_url" -o "$driver_filename"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 elif command -v wget >/dev/null 2>&1; then
-                    download_command="wget -O '$driver_filename' '$driver_url'"
+                    if ! wget -O "$driver_filename" "$driver_url"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 else
                     echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
                     exit 1
                 fi
-            fi
-
-            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-            if ! eval "$download_command"; then
-                echo -e "${RED}[!]${NC} Download failed."
-                exit 1
             fi
 
             if [ -n "$md5" ]; then
@@ -2486,29 +2562,33 @@ case $STEP in
                 echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
 
-            download_command=""
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+
             if [[ "$driver_url" == https://mega.nz/* ]]; then
-                if command -v megadl >/dev/null 2>&1; then
-                    download_command="megadl '$driver_url'"
-                else
+                if ! command -v megadl >/dev/null 2>&1; then
                     echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+
+                if ! megadl "$driver_url"; then
+                    echo -e "${RED}[!]${NC} Download failed."
                     exit 1
                 fi
             else
                 if command -v curl >/dev/null 2>&1; then
-                    download_command="curl -fSL '$driver_url' -o '$driver_filename'"
+                    if ! curl -fSL "$driver_url" -o "$driver_filename"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 elif command -v wget >/dev/null 2>&1; then
-                    download_command="wget -O '$driver_filename' '$driver_url'"
+                    if ! wget -O "$driver_filename" "$driver_url"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
                 else
                     echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
                     exit 1
                 fi
-            fi
-
-            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-            if ! eval "$download_command"; then
-                echo -e "${RED}[!]${NC} Download failed."
-                exit 1
             fi
 
             if [ -n "$md5" ]; then
