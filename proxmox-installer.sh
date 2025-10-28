@@ -592,7 +592,11 @@ set_config_value() {
     local tmp
     tmp=$(mktemp)
     if [ -s "$CONFIG_FILE" ]; then
-        grep -v "^${key}=" "$CONFIG_FILE" > "$tmp"
+        # grep exits with status 1 when no lines are selected. This is an
+        # expected condition when the key is the only entry in the config
+        # file, so ignore the non-zero status to keep set -e from aborting
+        # the script prematurely.
+        grep -v "^${key}=" "$CONFIG_FILE" > "$tmp" || true
     else
         : > "$tmp"
     fi
@@ -606,7 +610,10 @@ remove_config_key() {
     if [ -f "$CONFIG_FILE" ] && [ -s "$CONFIG_FILE" ]; then
         local tmp
         tmp=$(mktemp)
-        grep -v "^${key}=" "$CONFIG_FILE" > "$tmp"
+        # As above, allow grep to exit with status 1 when the key is absent
+        # or the last remaining entry so that we can safely rewrite the
+        # config file under set -e.
+        grep -v "^${key}=" "$CONFIG_FILE" > "$tmp" || true
         mv "$tmp" "$CONFIG_FILE"
     fi
 }
