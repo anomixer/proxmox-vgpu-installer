@@ -33,6 +33,35 @@ declare -A DRIVER_NOTES=()
 declare -A DRIVER_BY_FILENAME=()
 declare -A PATCH_OVERRIDES=()
 
+snapshot_run_artifacts() {
+    find . -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64-*-vgpu-kvm*.run' -printf '%f\n' 2>/dev/null | LC_ALL=C sort
+}
+
+select_new_run_artifact() {
+    local pre_snapshot="$1"
+    local post_snapshot="$2"
+    local driver_filename="$3"
+
+    declare -A seen_pre=()
+    while IFS= read -r run_file; do
+        if [ -n "$run_file" ]; then
+            seen_pre["$run_file"]=1
+        fi
+    done <<<"$pre_snapshot"
+
+    while IFS= read -r run_file; do
+        if [ -z "$run_file" ] || [ "$run_file" = "$driver_filename" ]; then
+            continue
+        fi
+        if [ -z "${seen_pre[$run_file]:-}" ]; then
+            printf '%s\n' "$run_file"
+            return 0
+        fi
+    done <<<"$post_snapshot"
+
+    return 1
+}
+
 load_patch_overrides() {
     if [ ! -f "$PATCH_MAP_FILE" ]; then
         return
@@ -712,6 +741,416 @@ EOF
     fi
 }
 
+print_guest_driver_guidance() {
+    local branch="$1"
+    local driver_filename="$2"
+
+    if [[ -z "$branch" ]]; then
+        printf "%b\n" "${YELLOW}[-]${NC} Download guest drivers matching host version ${driver_filename} from NVIDIA's enterprise portal."
+        return
+    fi
+
+    if [[ "$branch" == 19.* ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} Download the matching vGPU 19.x guest drivers (Windows/Linux) from NVIDIA's enterprise portal."
+    elif [[ "$branch" == 18.* ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} Download the matching vGPU 18.x guest drivers (Windows/Linux) from NVIDIA's enterprise portal."
+    elif [[ "$branch" == "17.4" ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.127.06"
+    elif [[ "$branch" == "17.3" ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.90.05"
+    elif [[ "$branch" == "17.0" ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.54.10"
+        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/NVIDIA-Linux-x86_64-550.54.14-grid.run"
+        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/551.61_grid_win10_win11_server2022_dch_64bit_international.exe"
+    elif [[ "$branch" == "16.4" ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.161.05"
+        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/NVIDIA-Linux-x86_64-535.161.07-grid.run"
+        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/538.33_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
+    elif [[ "$branch" == "16.2" ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.129.03"
+        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/NVIDIA-Linux-x86_64-535.129.03-grid.run"
+        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/537.70_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
+    elif [[ "$branch" == "16.1" ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.104.06"
+        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/NVIDIA-Linux-x86_64-535.104.05-grid.run"
+        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/537.13_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
+    elif [[ "$branch" == "16.0" ]]; then
+        printf "%b\n" "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.54.06"
+        printf "%b\n" "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/NVIDIA-Linux-x86_64-535.54.03-grid.run"
+        printf "%b\n" "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/536.25_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
+    else
+        printf "%b\n" "${YELLOW}[-]${NC} Download guest drivers matching host version ${driver_filename} from NVIDIA's enterprise portal."
+    fi
+}
+
+perform_step_two() {
+    echo ""
+    echo "You are currently at step ${STEP} of the installation process"
+    echo ""
+    echo "Proceeding with the installation"
+    echo ""
+
+    load_patch_overrides
+
+    secure_boot_precheck
+
+    # Check if IOMMU / DMAR is enabled
+    if dmesg | grep -e IOMMU | grep -q "Detected AMD IOMMU"; then
+        echo -e "${GREEN}[+]${NC} AMD IOMMU Enabled"
+    elif dmesg | grep -e DMAR | grep -q "IOMMU enabled"; then
+        echo -e "${GREEN}[+]${NC} Intel IOMMU Enabled"
+    else
+        vendor_id=$(cat /proc/cpuinfo | grep vendor_id | awk 'NR==1{print $3}')
+        if [ "$vendor_id" = "AuthenticAMD" ]; then
+            echo -e "${RED}[!]${NC} AMD IOMMU Disabled"
+            echo -e ""
+            echo -e "Please make sure you have IOMMU enabled in the BIOS"
+            echo -e "and make sure that this line is present in /etc/default/grub"
+            echo -e "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet amd_iommu=on iommu=pt\""
+            echo ""
+        elif [ "$vendor_id" = "GenuineIntel" ]; then
+            echo -e "${RED}[!]${NC} Intel IOMMU Disabled"
+            echo -e ""
+            echo -e "Please make sure you have VT-d enabled in the BIOS"
+            echo -e "and make sure that this line is present in /etc/default/grub"
+            echo -e "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet intel_iommu=on iommu=pt\""
+            echo ""
+        else
+            echo -e "${RED}[!]${NC} Unknown CPU architecture."
+            echo ""
+            exit 1
+        fi
+        echo -n -e "${RED}[!]${NC} IOMMU is disabled. Do you want to continue anyway? (y/n): "
+        read -r continue_choice
+        if [ "$continue_choice" != "y" ]; then
+            echo "Exiting script."
+            exit 0
+        fi
+    fi
+
+    if [ -n "$URL" ]; then
+        echo -e "${GREEN}[+]${NC} Downloading vGPU host driver using curl"
+        # Extract filename from URL
+        driver_filename=$(extract_filename_from_url "$URL")
+
+        # Download the file using curl
+        run_command "Downloading $driver_filename" "info" "curl -s -o $driver_filename -L $URL"
+
+        if [[ "$driver_filename" == *.zip ]]; then
+            # Extract the zip file
+            unzip -q "$driver_filename"
+            # Look for .run file inside
+            run_file=$(find . -name '*.run' -type f -print -quit)
+            if [ -n "$run_file" ]; then
+                # Map filename to driver version and patch
+                if map_filename_to_version "$run_file"; then
+                    driver_filename="$run_file"
+                    sync_fastapi_flag
+                else
+                    echo -e "${RED}[!]${NC} Unrecognized filename inside the zip file. Exiting."
+                    exit 1
+                fi
+            else
+                echo -e "${RED}[!]${NC} No .run file found inside the zip. Exiting."
+                exit 1
+            fi
+        fi
+
+        # Check if it's a .run file
+        if [[ "$driver_filename" =~ \.run$ ]]; then
+            # Map filename to driver version and patch
+            if map_filename_to_version "$driver_filename"; then
+                echo -e "${GREEN}[+]${NC} Compatible filename found: $driver_filename"
+                sync_fastapi_flag
+            else
+                echo -e "${RED}[!]${NC} Unrecognized filename: $driver_filename. Exiting."
+                exit 1
+            fi
+        else
+            echo -e "${RED}[!]${NC} Invalid file format. Only .zip and .run files are supported. Exiting."
+            exit 1
+        fi
+
+    elif [ -n "$FILE" ]; then
+        echo -e "${GREEN}[+]${NC} Using $FILE as vGPU host driver"
+        # Map filename to driver version and patch
+        if map_filename_to_version "$FILE"; then
+            # If the filename is recognized
+            driver_filename="$FILE"
+            echo -e "${YELLOW}[-]${NC} Driver version: $driver_filename"
+            sync_fastapi_flag
+        else
+            # If the filename is not recognized
+            echo -e "${RED}[!]${NC} No patches available for your vGPU driver version"
+            exit 1
+        fi
+    else
+
+        contains_version() {
+            local version="$1"
+            if [[ "$DRIVER_VERSION" == *"$version"* ]]; then
+                return 0
+            else
+                return 1
+            fi
+        }
+
+        case "$major_version" in
+            9)
+                echo -e "${YELLOW}[-]${NC} You are running Proxmox version $version"
+                if contains_version "19"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 19.x"
+                elif contains_version "18"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 18.x"
+                elif contains_version "17"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 17.x"
+                else
+                    echo -e "${YELLOW}[-]${NC} Review GPU database output for the recommended branch."
+                fi
+                ;;
+            8)
+                echo -e "${YELLOW}[-]${NC} You are running Proxmox version $version"
+                if contains_version "18"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 18.x"
+                elif contains_version "17" && contains_version "16"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branches 17.x and 16.x"
+                elif contains_version "17"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 17.x"
+                elif contains_version "16"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 16.x"
+                fi
+                ;;
+            7)
+                echo -e "${YELLOW}[-]${NC} You are running Proxmox version $version"
+                if contains_version "16"; then
+                    echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 16.x"
+                fi
+                ;;
+        esac
+
+        if ! select_driver_branch false; then
+            exit 1
+        fi
+
+        echo -e "${YELLOW}[-]${NC} Driver version: $driver_filename"
+
+        DRIVER_VERSION="$driver_version"
+        sync_fastapi_flag
+
+        if [ -z "$URL" ] && [ -z "$driver_url" ]; then
+            echo -e "${RED}[!]${NC} No download URL registered for $driver_filename. Provide the file manually or use --url."
+            exit 1
+        fi
+
+        if [ -z "$URL" ]; then
+            if [ -e "$driver_filename" ]; then
+                mv "$driver_filename" "$driver_filename.bak"
+                echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
+            fi
+
+            download_command=""
+            if [[ "$driver_url" == https://mega.nz/* ]]; then
+                if command -v megadl >/dev/null 2>&1; then
+                    download_command="megadl '$driver_url'"
+                else
+                    echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+            else
+                if command -v curl >/dev/null 2>&1; then
+                    download_command="curl -fSL '$driver_url' -o '$driver_filename'"
+                elif command -v wget >/dev/null 2>&1; then
+                    download_command="wget -O '$driver_filename' '$driver_url'"
+                else
+                    echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
+                    exit 1
+                fi
+            fi
+
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+            if ! eval "$download_command"; then
+                echo -e "${RED}[!]${NC} Download failed."
+                exit 1
+            fi
+
+            if [ -n "$md5" ]; then
+                downloaded_md5=$(md5sum "$driver_filename" | awk '{print $1}')
+                if [ "$downloaded_md5" != "$md5" ]; then
+                    echo -e "${RED}[!]${NC}  MD5 checksum mismatch. Downloaded file is corrupt."
+                    echo ""
+                    read -p "$(echo -e "${BLUE}[?]${NC}Do you want to continue? (y/n): ")" choice
+                    echo ""
+                    if [ "$choice" != "y" ]; then
+                        echo "Exiting script."
+                        exit 1
+                    fi
+                else
+                    echo -e "${GREEN}[+]${NC} MD5 checksum matched. Downloaded file is valid."
+                fi
+            else
+                echo -e "${YELLOW}[-]${NC} No MD5 checksum available for validation."
+            fi
+        fi
+    fi
+
+    # Make driver executable
+    chmod +x "$driver_filename"
+
+    secure_boot_flags=$(build_secure_boot_flags)
+    if [ -n "$secure_boot_flags" ]; then
+        echo -e "${GREEN}[+]${NC} Secure Boot signing parameters will be applied during driver installation."
+    fi
+
+    if version_ge "$driver_version" "18.0"; then
+        install_flags="--dkms -s"
+    else
+        install_flags="--dkms -m=kernel -s"
+    fi
+    if [ -n "$secure_boot_flags" ]; then
+        install_flags="$install_flags $secure_boot_flags"
+    fi
+
+    # Patch and install the driver only if vGPU is not native
+    if [ "$VGPU_SUPPORT" = "Yes" ]; then
+        if [ -z "$driver_patch" ]; then
+            echo -e "${RED}[!]${NC} Patch metadata missing for driver $driver_filename. Unable to continue unlock-based installation."
+            exit 1
+        fi
+        # Add custom to original filename
+        custom_filename="${driver_filename%.run}-custom.run"
+        custom_backup=""
+
+        # Check if $custom_filename exists
+        if [ -e "$custom_filename" ]; then
+            custom_backup="${custom_filename}.bak.$(date +%s)"
+            mv "$custom_filename" "$custom_backup"
+            echo -e "${YELLOW}[-]${NC} Moved $custom_filename to $custom_backup"
+        fi
+
+        pre_patch_snapshot=$(snapshot_run_artifacts)
+        original_driver_checksum=""
+        original_driver_mtime=""
+        if [ -e "$driver_filename" ]; then
+            original_driver_checksum=$(sha256sum "$driver_filename" 2>/dev/null | awk '{print $1}')
+            original_driver_mtime=$(stat -c '%Y' "$driver_filename" 2>/dev/null || echo "")
+        fi
+
+        # Patch and install the driver
+        ensure_patch_compat
+        run_command "Patching driver" "info" "./$driver_filename --apply-patch $VGPU_DIR/vgpu-proxmox/$driver_patch"
+
+        post_patch_snapshot=$(snapshot_run_artifacts)
+        patched_installer=""
+
+        if [ -e "$custom_filename" ]; then
+            patched_installer="$custom_filename"
+        fi
+
+        if [ -z "$patched_installer" ]; then
+            patched_installer=$(select_new_run_artifact "$pre_patch_snapshot" "$post_patch_snapshot" "$driver_filename" || true)
+        fi
+
+        if [ -z "$patched_installer" ] && [ -n "$original_driver_checksum" ] && [ -e "$driver_filename" ]; then
+            new_driver_checksum=$(sha256sum "$driver_filename" 2>/dev/null | awk '{print $1}')
+            new_driver_mtime=$(stat -c '%Y' "$driver_filename" 2>/dev/null || echo "")
+            if [ -n "$new_driver_checksum" ] && [ "$new_driver_checksum" != "$original_driver_checksum" ]; then
+                patched_installer="$driver_filename"
+                echo -e "${YELLOW}[-]${NC} Patched installer appears to reuse $driver_filename (checksum changed)."
+            elif [ -n "$new_driver_mtime" ] && [ -n "$original_driver_mtime" ] && [ "$new_driver_mtime" != "$original_driver_mtime" ]; then
+                patched_installer="$driver_filename"
+                echo -e "${YELLOW}[-]${NC} Patched installer appears to reuse $driver_filename (timestamp updated)."
+            fi
+        fi
+
+        if [ -n "$custom_backup" ] && [ -e "$custom_backup" ]; then
+            if [ -n "$patched_installer" ]; then
+                rm -f "$custom_backup"
+            elif [ ! -e "$custom_filename" ]; then
+                mv "$custom_backup" "$custom_filename"
+            fi
+        fi
+
+        if [ -z "$patched_installer" ] || [ ! -e "$patched_installer" ]; then
+            echo -e "${RED}[!]${NC} Patched driver file not found after applying patch."
+            echo -e "${YELLOW}[-]${NC} Check $LOG_FILE for patch output and verify compatibility for $driver_patch."
+            available_runs="$post_patch_snapshot"
+            if [ -z "$available_runs" ]; then
+                available_runs=$(snapshot_run_artifacts)
+            fi
+            if [ -n "${available_runs:-}" ]; then
+                available_runs=$(printf '%s\n' "$available_runs" | sed 's/^/    - /')
+                echo -e "${YELLOW}[-]${NC} Installer artifacts detected in $(pwd):\n${available_runs}"
+            fi
+            exit 1
+        fi
+
+        # Run the patched driver installer
+        chmod +x "$patched_installer"
+        run_command "Installing patched driver" "info" "./$patched_installer $install_flags"
+    elif [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Unknown" ]; then
+        # Run the regular driver installer
+        run_command "Installing native driver" "info" "./$driver_filename $install_flags"
+    else
+        echo -e "${RED}[!]${NC} Unknown or unsupported GPU: $VGPU_SUPPORT"
+        echo ""
+        echo "Exiting script."
+        echo ""
+        exit 1
+    fi
+
+    echo -e "${GREEN}[+]${NC} Driver installed successfully."
+
+    echo -e "${GREEN}[+]${NC} Nvidia driver version: $driver_filename"
+
+    nvidia_smi_output=$(nvidia-smi vgpu 2>&1)
+
+    # Extract version from FILE
+    FILE_VERSION=$(echo "$driver_filename" | grep -oP '\d+\.\d+\.\d+')
+
+    if [[ "$nvidia_smi_output" == *"NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver."* ]] || [[ "$nvidia_smi_output" == *"No supported devices in vGPU mode"* ]]; then
+        echo -e "${RED}[+]${NC} Nvidia driver not properly loaded"
+    elif [[ "$nvidia_smi_output" == *"Driver Version: $FILE_VERSION"* ]]; then
+        echo -e "${GREEN}[+]${NC} Nvidia driver properly loaded, version matches $FILE_VERSION"
+    else
+        echo -e "${GREEN}[+]${NC} Nvidia driver properly loaded"
+    fi
+
+    # Start nvidia-services
+    if systemctl list-unit-files nvidia-vgpud.service >/dev/null 2>&1; then
+        run_command "Enable nvidia-vgpud.service" "info" "systemctl enable --now nvidia-vgpud.service"
+    else
+        echo -e "${YELLOW}[-]${NC} Skipping enable for nvidia-vgpud.service (unit not found)."
+    fi
+
+    if systemctl list-unit-files nvidia-vgpu-mgr.service >/dev/null 2>&1; then
+        run_command "Enable nvidia-vgpu-mgr.service" "info" "systemctl enable --now nvidia-vgpu-mgr.service"
+    else
+        echo -e "${YELLOW}[-]${NC} Skipping enable for nvidia-vgpu-mgr.service (unit not found)."
+    fi
+
+    if [ "${FASTAPI_WARNING}" = "1" ]; then
+        echo -e "${YELLOW}[!]${NC} Reminder: Driver branch ${driver_version} requires gridd-unlock patches or nvlts for licensing."
+    fi
+
+    # Provide guest driver guidance without relying on nested case blocks to avoid parser issues on older bash releases
+    print_guest_driver_guidance "$driver_version" "$driver_filename"
+
+    echo ""
+    echo "Step 2 completed and installation process is now finished."
+    echo ""
+    echo "List all available mdevs by typing: mdevctl types and choose the one that fits your needs and VRAM capabilities"
+    echo "Login to your Proxmox server over http/https. Click the VM and go to Hardware."
+    echo "Under Add choose PCI Device and assign the desired mdev type to your VM"
+    echo ""
+    echo "Removing the config.txt file."
+    echo ""
+
+    rm -f "$CONFIG_FILE"
+
+    # Option to license the vGPU
+    configure_fastapi_dls
+}
+
 # Check for root
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root. Please use sudo or execute as root user."
@@ -1333,357 +1772,7 @@ case $STEP in
         esac
     ;;
     2)
-        # Step 2: Commands for the second reboot of a new installation or upgrade
-        echo ""
-        echo "You are currently at step ${STEP} of the installation process"
-        echo ""
-        echo "Proceeding with the installation"
-        echo ""
-
-        load_patch_overrides
-
-        secure_boot_precheck
-
-        # Check if IOMMU / DMAR is enabled
-        if dmesg | grep -e IOMMU | grep -q "Detected AMD IOMMU"; then
-            echo -e "${GREEN}[+]${NC} AMD IOMMU Enabled"
-        elif dmesg | grep -e DMAR | grep -q "IOMMU enabled"; then
-            echo -e "${GREEN}[+]${NC} Intel IOMMU Enabled"
-        else
-            vendor_id=$(cat /proc/cpuinfo | grep vendor_id | awk 'NR==1{print $3}')
-            if [ "$vendor_id" = "AuthenticAMD" ]; then
-                echo -e "${RED}[!]${NC} AMD IOMMU Disabled"
-                echo -e ""
-                echo -e "Please make sure you have IOMMU enabled in the BIOS"
-                echo -e "and make sure that this line is present in /etc/default/grub"
-                echo -e "GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on iommu=pt""
-                echo ""
-            elif [ "$vendor_id" = "GenuineIntel" ]; then
-                echo -e "${RED}[!]${NC} Intel IOMMU Disabled"
-                echo -e ""
-                echo -e "Please make sure you have VT-d enabled in the BIOS"
-                echo -e "and make sure that this line is present in /etc/default/grub"
-                echo -e "GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt""
-                echo ""
-            else
-                echo -e "${RED}[!]${NC} Unknown CPU architecture."
-                echo ""
-                exit 1
-            fi   
-            echo -n -e "${RED}[!]${NC} IOMMU is disabled. Do you want to continue anyway? (y/n): "
-            read -r continue_choice
-            if [ "$continue_choice" != "y" ]; then
-                echo "Exiting script."
-                exit 0
-            fi
-        fi
-
-        if [ -n "$URL" ]; then
-            echo -e "${GREEN}[+]${NC} Downloading vGPU host driver using curl"
-            # Extract filename from URL
-            driver_filename=$(extract_filename_from_url "$URL")
-            
-            # Download the file using curl
-            run_command "Downloading $driver_filename" "info" "curl -s -o $driver_filename -L $URL"
-            
-            if [[ "$driver_filename" == *.zip ]]; then
-                # Extract the zip file
-                unzip -q "$driver_filename"
-                # Look for .run file inside
-                run_file=$(find . -name '*.run' -type f -print -quit)
-                if [ -n "$run_file" ]; then
-                    # Map filename to driver version and patch
-                    if map_filename_to_version "$run_file"; then
-                        driver_filename="$run_file"
-                        sync_fastapi_flag
-                    else
-                        echo -e "${RED}[!]${NC} Unrecognized filename inside the zip file. Exiting."
-                        exit 1
-                    fi
-                else
-                    echo -e "${RED}[!]${NC} No .run file found inside the zip. Exiting."
-                    exit 1
-                fi
-            fi
-            
-            # Check if it's a .run file
-            if [[ "$driver_filename" =~ \.run$ ]]; then
-                # Map filename to driver version and patch
-                if map_filename_to_version "$driver_filename"; then
-                    echo -e "${GREEN}[+]${NC} Compatible filename found: $driver_filename"
-                    sync_fastapi_flag
-                else
-                    echo -e "${RED}[!]${NC} Unrecognized filename: $driver_filename. Exiting."
-                    exit 1
-                fi
-            else
-                echo -e "${RED}[!]${NC} Invalid file format. Only .zip and .run files are supported. Exiting."
-                exit 1
-            fi
-
-        elif [ -n "$FILE" ]; then
-            echo -e "${GREEN}[+]${NC} Using $FILE as vGPU host driver"
-            # Map filename to driver version and patch
-            if map_filename_to_version "$FILE"; then
-                # If the filename is recognized
-                driver_filename="$FILE"
-                echo -e "${YELLOW}[-]${NC} Driver version: $driver_filename"
-                sync_fastapi_flag
-            else
-                # If the filename is not recognized
-                echo -e "${RED}[!]${NC} No patches available for your vGPU driver version"
-                exit 1
-            fi
-        else
-
-            contains_version() {
-                local version="$1"
-                if [[ "$DRIVER_VERSION" == *"$version"* ]]; then
-                    return 0
-                else
-                    return 1
-                fi
-            }
-
-            case "$major_version" in
-                9)
-                    echo -e "${YELLOW}[-]${NC} You are running Proxmox version $version"
-                    if contains_version "19"; then
-                        echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 19.x"
-                    elif contains_version "18"; then
-                        echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 18.x"
-                    elif contains_version "17"; then
-                        echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 17.x"
-                    else
-                        echo -e "${YELLOW}[-]${NC} Review GPU database output for the recommended branch."
-                    fi
-                    ;;
-                8)
-                    echo -e "${YELLOW}[-]${NC} You are running Proxmox version $version"
-                    if contains_version "18"; then
-                        echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 18.x"
-                    elif contains_version "17" && contains_version "16"; then
-                        echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branches 17.x and 16.x"
-                    elif contains_version "17"; then
-                        echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 17.x"
-                    elif contains_version "16"; then
-                        echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 16.x"
-                    fi
-                    ;;
-                7)
-                    echo -e "${YELLOW}[-]${NC} You are running Proxmox version $version"
-                    if contains_version "16"; then
-                        echo -e "${YELLOW}[-]${NC} Your Nvidia GPU is supported by driver branch 16.x"
-                    fi
-                    ;;
-            esac
-
-            if ! select_driver_branch false; then
-                exit 1
-            fi
-
-            echo -e "${YELLOW}[-]${NC} Driver version: $driver_filename"
-
-            DRIVER_VERSION="$driver_version"
-            sync_fastapi_flag
-
-            if [ -z "$URL" ] && [ -z "$driver_url" ]; then
-                echo -e "${RED}[!]${NC} No download URL registered for $driver_filename. Provide the file manually or use --url."
-                exit 1
-            fi
-
-            if [ -z "$URL" ]; then
-                if [ -e "$driver_filename" ]; then
-                    mv "$driver_filename" "$driver_filename.bak"
-                    echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
-                fi
-
-                download_command=""
-                if [[ "$driver_url" == https://mega.nz/* ]]; then
-                    if command -v megadl >/dev/null 2>&1; then
-                        download_command="megadl '$driver_url'"
-                    else
-                        echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
-                        exit 1
-                    fi
-                else
-                    if command -v curl >/dev/null 2>&1; then
-                        download_command="curl -fSL '$driver_url' -o '$driver_filename'"
-                    elif command -v wget >/dev/null 2>&1; then
-                        download_command="wget -O '$driver_filename' '$driver_url'"
-                    else
-                        echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
-                        exit 1
-                    fi
-                fi
-
-                echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-                if ! eval "$download_command"; then
-                    echo -e "${RED}[!]${NC} Download failed."
-                    exit 1
-                fi
-
-                if [ -n "$md5" ]; then
-                    downloaded_md5=$(md5sum "$driver_filename" | awk '{print $1}')
-                    if [ "$downloaded_md5" != "$md5" ]; then
-                        echo -e "${RED}[!]${NC}  MD5 checksum mismatch. Downloaded file is corrupt."
-                        echo ""
-                        read -p "$(echo -e "${BLUE}[?]${NC}Do you want to continue? (y/n): ")" choice
-                        echo ""
-                        if [ "$choice" != "y" ]; then
-                            echo "Exiting script."
-                            exit 1
-                        fi
-                    else
-                        echo -e "${GREEN}[+]${NC} MD5 checksum matched. Downloaded file is valid."
-                    fi
-                else
-                    echo -e "${YELLOW}[-]${NC} No MD5 checksum available for validation."
-                fi
-            fi
-        fi
-
-        # Make driver executable
-        chmod +x "$driver_filename"
-
-        secure_boot_flags=$(build_secure_boot_flags)
-        if [ -n "$secure_boot_flags" ]; then
-            echo -e "${GREEN}[+]${NC} Secure Boot signing parameters will be applied during driver installation."
-        fi
-
-        if version_ge "$driver_version" "18.0"; then
-            install_flags="--dkms -s"
-        else
-            install_flags="--dkms -m=kernel -s"
-        fi
-        if [ -n "$secure_boot_flags" ]; then
-            install_flags="$install_flags $secure_boot_flags"
-        fi
-
-        # Patch and install the driver only if vGPU is not native
-        if [ "$VGPU_SUPPORT" = "Yes" ]; then
-            if [ -z "$driver_patch" ]; then
-                echo -e "${RED}[!]${NC} Patch metadata missing for driver $driver_filename. Unable to continue unlock-based installation."
-                exit 1
-            fi
-            # Add custom to original filename
-            custom_filename="${driver_filename%.run}-custom.run"
-
-            # Check if $custom_filename exists
-            if [ -e "$custom_filename" ]; then
-                mv "$custom_filename" "$custom_filename.bak"
-                echo -e "${YELLOW}[-]${NC} Moved $custom_filename to $custom_filename.bak"
-            fi
-
-            # Patch and install the driver
-            ensure_patch_compat
-            run_command "Patching driver" "info" "./$driver_filename --apply-patch $VGPU_DIR/vgpu-proxmox/$driver_patch"
-            # Run the patched driver installer
-            chmod +x "$custom_filename"
-            run_command "Installing patched driver" "info" "./$custom_filename $install_flags"
-        elif [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Unknown" ]; then
-            # Run the regular driver installer
-            run_command "Installing native driver" "info" "./$driver_filename $install_flags"
-        else
-            echo -e "${RED}[!]${NC} Unknown or unsupported GPU: $VGPU_SUPPORT"
-            echo ""
-            echo "Exiting script."
-            echo ""
-            exit 1
-        fi
-
-        echo -e "${GREEN}[+]${NC} Driver installed successfully."
-
-        echo -e "${GREEN}[+]${NC} Nvidia driver version: $driver_filename"
-
-        nvidia_smi_output=$(nvidia-smi vgpu 2>&1)
-
-        # Extract version from FILE
-        FILE_VERSION=$(echo "$driver_filename" | grep -oP '\d+\.\d+\.\d+')
-
-        if [[ "$nvidia_smi_output" == *"NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver."* ]] || [[ "$nvidia_smi_output" == *"No supported devices in vGPU mode"* ]]; then
-            echo -e "${RED}[+]${NC} Nvidia driver not properly loaded"
-        elif [[ "$nvidia_smi_output" == *"Driver Version: $FILE_VERSION"* ]]; then
-            echo -e "${GREEN}[+]${NC} Nvidia driver properly loaded, version matches $FILE_VERSION"
-        else
-            echo -e "${GREEN}[+]${NC} Nvidia driver properly loaded"
-        fi
-
-        # Start nvidia-services
-        if systemctl list-unit-files nvidia-vgpud.service >/dev/null 2>&1; then
-            run_command "Enable nvidia-vgpud.service" "info" "systemctl enable --now nvidia-vgpud.service"
-        else
-            echo -e "${YELLOW}[-]${NC} Skipping enable for nvidia-vgpud.service (unit not found)."
-        fi
-
-        if systemctl list-unit-files nvidia-vgpu-mgr.service >/dev/null 2>&1; then
-            run_command "Enable nvidia-vgpu-mgr.service" "info" "systemctl enable --now nvidia-vgpu-mgr.service"
-        else
-            echo -e "${YELLOW}[-]${NC} Skipping enable for nvidia-vgpu-mgr.service (unit not found)."
-        fi
-
-        if [ "${FASTAPI_WARNING}" = "1" ]; then
-            echo -e "${YELLOW}[!]${NC} Reminder: Driver branch ${driver_version} requires gridd-unlock patches or nvlts for licensing."
-        fi
-
-        # Check DRIVER_VERSION against specific branches for guest driver guidance
-        case "$driver_version" in
-            19.*)
-                echo -e "${GREEN}[+]${NC} Download the matching vGPU 19.x guest drivers (Windows/Linux) from NVIDIA's enterprise portal."
-                ;;
-            18.*)
-                echo -e "${GREEN}[+]${NC} Download the matching vGPU 18.x guest drivers (Windows/Linux) from NVIDIA's enterprise portal."
-                ;;
-            17.4)
-                echo -e "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.127.06"
-                ;;
-            17.3)
-                echo -e "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.90.05"
-                ;;
-            17.0)
-                echo -e "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 550.54.10"
-                echo -e "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/NVIDIA-Linux-x86_64-550.54.14-grid.run"
-                echo -e "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU17.0/551.61_grid_win10_win11_server2022_dch_64bit_international.exe"
-                ;;
-            16.4)
-                echo -e "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.161.05"
-                echo -e "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/NVIDIA-Linux-x86_64-535.161.07-grid.run"
-                echo -e "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.4/538.33_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
-                ;;
-            16.2)
-                echo -e "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.129.03"
-                echo -e "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/NVIDIA-Linux-x86_64-535.129.03-grid.run"
-                echo -e "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.2/537.70_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
-                ;;
-            16.1)
-                echo -e "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.104.06"
-                echo -e "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/NVIDIA-Linux-x86_64-535.104.05-grid.run"
-                echo -e "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.1/537.13_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
-                ;;
-            16.0)
-                echo -e "${GREEN}[+]${NC} In your VM download Nvidia guest driver for version: 535.54.06"
-                echo -e "${YELLOW}[-]${NC} Linux: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/NVIDIA-Linux-x86_64-535.54.03-grid.run"
-                echo -e "${YELLOW}[-]${NC} Windows: https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.0/536.25_grid_win10_win11_server2019_server2022_dch_64bit_international.exe"
-                ;;
-            *)
-                echo -e "${YELLOW}[-]${NC} Download guest drivers matching host version ${driver_filename} from NVIDIA's enterprise portal."
-                ;;
-        esac
-
-        echo ""
-        echo "Step 2 completed and installation process is now finished."
-        echo ""
-        echo "List all available mdevs by typing: mdevctl types and choose the one that fits your needs and VRAM capabilities"
-        echo "Login to your Proxmox server over http/https. Click the VM and go to Hardware."
-        echo "Under Add choose PCI Device and assign the desired mdev type to your VM"
-        echo ""
-        echo "Removing the config.txt file."
-        echo ""
-
-        rm -f "$CONFIG_FILE" 
-
-        # Option to license the vGPU
-        configure_fastapi_dls
+        perform_step_two
         ;;
     *)
         echo "Invalid installation step. Please check the script."
