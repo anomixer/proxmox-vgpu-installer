@@ -284,7 +284,7 @@ configure_proxmox_repos() {
             ceph_line="deb http://download.proxmox.com/debian/ceph-quincy bookworm no-subscription"
             ;;
         trixie)
-            ceph_line="deb http://download.proxmox.com/debian/ceph-reef trixie no-subscription"
+            ceph_line="deb http://download.proxmox.com/debian/ceph-squid trixie no-subscription"
             ;;
     esac
 
