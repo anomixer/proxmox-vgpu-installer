@@ -94,6 +94,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from html.parser import HTMLParser
 
 branch = sys.argv[1].strip()
 host_version = sys.argv[2].strip()
@@ -124,12 +125,53 @@ def clean_text(fragment: str) -> str:
     text = html.unescape(text)
     return " ".join(text.split())
 
+class AnchorCollector(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.links = []
+        self._current_href = None
+        self._current_text = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != "a":
+            return
+        href = ""
+        for key, value in attrs:
+            if key.lower() == "href" and value:
+                href = html.unescape(value)
+                break
+        self._current_href = href
+        self._current_text = []
+
+    def handle_data(self, data):
+        if self._current_href is None:
+            return
+        if data:
+            self._current_text.append(data)
+
+    def handle_endtag(self, tag):
+        if tag.lower() != "a":
+            return
+        if self._current_href is not None:
+            text = "".join(self._current_text)
+            self.links.append((self._current_href, clean_text(text)))
+        self._current_href = None
+        self._current_text = []
+
+    def handle_entityref(self, name):
+        self.handle_data(html.unescape(f"&{name};"))
+
+    def handle_charref(self, name):
+        if name.startswith("x") or name.startswith("X"):
+            codepoint = int(name[1:], 16)
+        else:
+            codepoint = int(name, 10)
+        self.handle_data(chr(codepoint))
+
 def parse_links(fragment: str):
-    anchors = re.findall(r"<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)</a>", fragment, re.S)
-    parsed = []
-    for href, text in anchors:
-        parsed.append((html.unescape(href), clean_text(text)))
-    return parsed
+    parser = AnchorCollector()
+    parser.feed(fragment)
+    return parser.links
 
 target_row = None
 for row in rows:
@@ -176,7 +218,13 @@ def is_linux_asset(href: str, text: str) -> bool:
     return False
 
 links = parse_links(target_row)
-filtered_links = [(href, text) for href, text in links if href]
+filtered_links = []
+for href, text in links:
+    if not href:
+        continue
+    if href.startswith("//"):
+        href = "https:" + href
+    filtered_links.append((href, text))
 
 for href, text in filtered_links:
     if not linux_url and is_linux_asset(href, text):
