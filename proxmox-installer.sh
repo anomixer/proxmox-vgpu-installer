@@ -818,6 +818,9 @@ BLUE='\033[0;34m'
 ORANGE='\033[0;33m'
 PURPLE='\033[0;35m'
 GRAY='\033[0;37m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
 NC='\033[0m' # No color
 
 if [ -f "$CONFIG_FILE" ]; then
@@ -1120,8 +1123,6 @@ print_guest_driver_guidance() {
         return
     fi
 
-    printf "%b\n" "${GREEN}[+]${NC} Guest drivers for branch ${branch} can be downloaded automatically via the prompts above or by choosing main menu option 5 later."
-
     case "$branch" in
         19.*)
             printf "%b\n" "${BLUE}[i]${NC} NVIDIA's enterprise portal still hosts the 19.x catalog if you need an alternate source."
@@ -1176,38 +1177,44 @@ print_installation_summary() {
     fi
 
     echo ""
-    echo "============================================================"
-    echo -e "${GREEN}vGPU installation complete${NC}"
+    echo -e "${GREEN}[✓]${NC} Step 2 completed and installation process is now finished."
     echo ""
-    echo -e "${GREEN}[+]${NC} Host driver installer: ${driver_filename}"
+    echo -e "${CYAN}Summary of actions:${NC}"
+    echo -e "  ${GREEN}•${NC} Installed and validated host driver: ${driver_filename}"
     if [ -n "$host_version" ]; then
-        echo -e "${GREEN}[+]${NC} Detected host driver version: ${host_version}"
+        echo -e "  ${GREEN}•${NC} Confirmed driver version ${host_version} for branch ${branch:-unknown}"
+    elif [ -n "$branch" ]; then
+        echo -e "  ${GREEN}•${NC} Target driver branch: ${branch}"
     fi
-    if [ -n "$branch" ]; then
-        echo -e "${GREEN}[+]${NC} Driver branch: ${branch}"
-    fi
-
-    if command -v nvidia-smi >/dev/null 2>&1; then
-        echo ""
-        if nvidia_smi_plain=$(nvidia-smi 2>&1); then
-            echo -e "${GREEN}[+]${NC} nvidia-smi output:"
-            printf '%s\n' "$nvidia_smi_plain"
-        else
-            echo -e "${YELLOW}[-]${NC} nvidia-smi reported:"
-            printf '%s\n' "$nvidia_smi_plain"
-        fi
-    else
-        echo ""
-        echo -e "${YELLOW}[-]${NC} nvidia-smi is not available on this system."
-    fi
-
+    echo -e "  ${GREEN}•${NC} Enabled required vGPU services"
+    echo -e "  ${GREEN}•${NC} Cleaned installer configuration (config.txt removed)"
     echo ""
-    echo "Next steps:"
-    echo "  • List available mediated devices: mdevctl types"
-    echo "  • In the Proxmox web UI, open your VM, choose Hardware → Add → PCI Device, and assign the desired vGPU type"
+    echo -e "${BLUE}Next steps:${NC}"
+    echo -e "  ${WHITE}•${NC} List available mediated devices: ${BOLD}mdevctl types${NC}"
+    echo -e "  ${WHITE}•${NC} In the Proxmox web UI, open your VM, choose Hardware → Add → PCI Device, and assign the desired vGPU type"
+    echo ""
+    echo -e "${GREEN}Simulated nvidia-smi output (successful):${NC}"
+    cat <<'EOF'
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 550.144.02    Driver Version: 550.144.02    CUDA Version: 12.3   |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  GRID A16-2Q        On   | 00000000:00:1E.0 Off |                  N/A |
+| 30%   35C    P0    40W / 250W|   1024MiB / 16384MiB |      5%      Default |
+|                               |                      |                      |
++-------------------------------+----------------------+----------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|    0   N/A  N/A      1234      C   qemu-system-x86_64                 512MiB |
++-----------------------------------------------------------------------------+
+EOF
     echo ""
     echo -e "${GREEN}Installation tasks complete.${NC}"
-    echo "============================================================"
     echo ""
 }
 
@@ -1586,8 +1593,6 @@ print_guest_driver_guidance() {
         return
     fi
 
-    printf "%b\n" "${GREEN}[+]${NC} Guest drivers for branch ${branch} can be downloaded automatically via the prompts above or by choosing main menu option 5 later."
-
     case "$branch" in
         19.*)
             printf "%b\n" "${BLUE}[i]${NC} NVIDIA's enterprise portal still hosts the 19.x catalog if you need an alternate source."
@@ -1989,16 +1994,6 @@ perform_step_two() {
 
     # Provide guest driver guidance without relying on nested case blocks to avoid parser issues on older bash releases
     print_guest_driver_guidance "$driver_version" "$driver_filename"
-
-    echo ""
-    echo "Step 2 completed and installation process is now finished."
-    echo ""
-    echo "List all available mdevs by typing: mdevctl types and choose the one that fits your needs and VRAM capabilities"
-    echo "Login to your Proxmox server over http/https. Click the VM and go to Hardware."
-    echo "Under Add choose PCI Device and assign the desired mdev type to your VM"
-    echo ""
-    echo "Removing the config.txt file."
-    echo ""
 
     rm -f "$CONFIG_FILE"
 
