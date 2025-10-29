@@ -1061,9 +1061,23 @@ services:
       <<: *dls-variables
     ports:
       - "$portnumber:443"
+    # Force asyncio loop (avoid uvloop under default confinement)
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0 --port 443
+      --loop asyncio
     volumes:
-      - /opt/docker/fastapi-dls/cert:/app/cert
       - dls-db:/app/database
+    init: true
+    # security_opt:
+    #   - seccomp=unconfined  # Optional fallback if you switch back to uvloop and hit seccomp denials
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:443/-/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 20s
     logging:  # optional, for those who do not need logs
       driver: "json-file"
       options:
@@ -1076,6 +1090,9 @@ EOF
         # Issue docker-compose
         run_command "Running Docker Compose" "info" "docker-compose -f \"$fastapi_dir/docker-compose.yml\" up -d"
 
+        echo -e "${BLUE}[i]${NC} FastAPI-DLS health endpoint: http://$host_address:$portnumber/-/health"
+        echo -e "${BLUE}[i]${NC} Docker Compose defaults to the asyncio event loop for compatibility. Review $fastapi_dir/docker-compose.yml if you need uvloop." 
+
         # Create directory where license script (Windows/Linux are stored)
         mkdir -p $VGPU_DIR/licenses
 
@@ -1084,14 +1101,14 @@ EOF
         cat > "$VGPU_DIR/licenses/license_linux.sh" <<EOF
 #!/bin/bash
 
-curl --insecure -L -X GET "https://$host_address:$portnumber/-/client-token" -o /etc/nvidia/ClientConfigToken/client_configuration_token_\$(date '+%d-%m-%Y-%H-%M-%S').tok
+curl -L -X GET "http://$host_address:$portnumber/-/client-token" -o /etc/nvidia/ClientConfigToken/client_configuration_token_\$(date '+%d-%m-%Y-%H-%M-%S').tok
 service nvidia-gridd restart
 nvidia-smi -q | grep "License"
 EOF
 
         # Create .ps1 file for Windows
         cat > "$VGPU_DIR/licenses/license_windows.ps1" <<EOF
-curl.exe --insecure -L -X GET "https://$host_address:$portnumber/-/client-token" -o "C:\Program Files\NVIDIA Corporation\vGPU Licensing\ClientConfigToken\client_configuration_token_\$(Get-Date -f 'dd-MM-yy-hh-mm-ss').tok"
+curl.exe -L -X GET "http://$host_address:$portnumber/-/client-token" -o "C:\Program Files\NVIDIA Corporation\vGPU Licensing\ClientConfigToken\client_configuration_token_\$(Get-Date -f 'dd-MM-yy-hh-mm-ss').tok"
 Restart-Service NVDisplay.ContainerLocalSystem
 & 'nvidia-smi' -q  | Select-String "License"
 EOF

@@ -11,11 +11,19 @@ Changes in version 1.7 (current release)
 - Externalized patch-to-driver mapping in `driver_patches.json` to simplify maintenance when NVIDIA releases new builds.
 - Expanded the end-of-installation summary with next steps and quick commands so new deployments are easier to verify.
 - Added 'Updated by' section to script for attribution of people updating the project
+- Updated the generated FastAPI-DLS Docker Compose to favor the asyncio event loop, include init/healthcheck/grace period tuning, and document how to re-enable uvloop or TLS if required.
 
 Changes in version 1.61
 - This version is a minor update and fill with newer driver download URL.
 - Support driver version 19.2
 - Note: Currently there has no patch files available since driver version 19.1 (580.82.02). Please wait for the patch release.
+
+## FastAPI-DLS deployment notes
+
+- The generated Docker Compose file now overrides the Uvicorn command with `--loop asyncio`, adds `init: true`, enables a container health check with a startup grace period, and applies a 20s `stop_grace_period` so FastAPI-DLS runs cleanly under Docker's default confinement.
+- To regain uvloop performance, edit the compose file to change `--loop asyncio` to `--loop uvloop` and uncomment the `security_opt` section so Docker runs the container with a relaxed profile (`seccomp=unconfined`).
+- TLS is optional—by default the generated scripts talk to `http://<host>:<port>` and Uvicorn is started without certificate flags. If you have certificates available, re-add the `/opt/docker/fastapi-dls/cert:/app/cert` volume and append `--ssl-keyfile /app/cert/webserver.key --ssl-certfile /app/cert/webserver.crt` to the overridden command.
+- The built-in health check endpoint is served at `http://<host>:<port>/-/health` for easy monitoring after the stack is online.
 
 Changes in version 1.6 (Forked and Improved by LeonardSEO)
 - This version is improved with new script structure including driver matrix, patch mechanism, and new workflow, etc.
