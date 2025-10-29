@@ -18,13 +18,6 @@ Changes in version 1.61
 - Support driver version 19.2
 - Note: Currently there has no patch files available since driver version 19.1 (580.82.02). Please wait for the patch release.
 
-## FastAPI-DLS deployment notes
-
-- The generated Docker Compose file now overrides the Uvicorn command with `--loop asyncio`, adds `init: true`, enables a container health check with a startup grace period, and applies a 20s `stop_grace_period` so FastAPI-DLS runs cleanly under Docker's default confinement.
-- To regain uvloop performance, edit the compose file to change `--loop asyncio` to `--loop uvloop` and uncomment the `security_opt` section so Docker runs the container with a relaxed profile (`seccomp=unconfined`).
-- TLS is optional—by default the generated scripts talk to `http://<host>:<port>` and Uvicorn is started without certificate flags. If you have certificates available, re-add the `/opt/docker/fastapi-dls/cert:/app/cert` volume and append `--ssl-keyfile /app/cert/webserver.key --ssl-certfile /app/cert/webserver.crt` to the overridden command.
-- The built-in health check endpoint is served at `http://<host>:<port>/-/health` for easy monitoring after the stack is online.
-
 Changes in version 1.6 (Forked and Improved by LeonardSEO)
 - This version is improved with new script structure including driver matrix, patch mechanism, and new workflow, etc.
 - Replace the static driver matrix with a data-driven catalog that covers v16.0 through v19.1, including mirrors, checksums, and branch-specific install flags (--dkms -m=kernel -s for legacy ≤17.x, --dkms -s for v18.x+).
@@ -55,7 +48,6 @@ Changes in version 1.5
 - **Mixed Source Downloads**: Integrated driver URLs from both alist.homelabproject.cc (current) and mega.nz (legacy/fork versions).
 - **Kernel Pin Independence**: Confirmed kernel pinning is optional to support broader vGPU version compatibility.
 - **FastAPI-DLS Compatibility**: Added compatibility warnings for vGPU licensing - works natively with v17.x and older, requires gridd-unlock-patcher for v18.0+.
-- **Note**: Driver version 19.1 (580.82.02) currently has no patch file available. Please wait for the 580.82.02.patch release.
 
 Changes in version 1.4
 - Fixed patch compatibility issue with Debian 13 (Proxmox 9) where patch v2.8 causes NUL byte errors during driver patching.
