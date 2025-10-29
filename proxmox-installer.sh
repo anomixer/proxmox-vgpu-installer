@@ -13,7 +13,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.1
+SCRIPT_VERSION=1.7
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -2023,6 +2023,7 @@ echo -e "${YELLOW}| | / /${GREEN} / __/ /_/ / / / /   / // __ \/ ___/ __/ __ ' /
 echo -e "${YELLOW}| |/ /${GREEN} /_/ / ____/ /_/ /  _/ // / / (__  ) /_/ /_/ / / /  __/ /     "
 echo -e "${YELLOW}|___/${GREEN}\____/_/    \____/  /___/_/ /_/____/\__/\__,_/_/_/\___/_/      ${NC}"
 echo -e "${BLUE}by wvthoog.nl${NC}"
+echo -e "${BLUE}Updated by RocketRammer, LeonardSEO, Anomixer${NC}"
 echo -e ""
 echo -e "Welcome to the Nvidia vGPU installer version $SCRIPT_VERSION for Proxmox"
 echo -e "This system is running Proxmox version ${version} with kernel ${kernel}"

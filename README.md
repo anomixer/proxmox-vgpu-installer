@@ -4,7 +4,14 @@ For further instructions see original author's blogpost at https://wvthoog.nl/pr
 
 For the script architecture, features, installation, and usage, see https://deepwiki.com/anomixer/proxmox-vgpu-installer
 
-Changes in version 1.51 (current release)
+Changes in version 1.7 (current release)
+- Added a built-in guest driver catalog with curated Linux and Windows packages for every supported vGPU branch and prompts to fetch them automatically after host driver installs or from menu option 5.
+- Hardened guest driver downloads with sanitized filenames, curl/wget fallbacks, and clearer success/error reporting.
+- Improved patched driver discovery by tracking installer artifacts before and after patching to reliably capture renamed outputs.
+- Externalized patch-to-driver mapping in `driver_patches.json` to simplify maintenance when NVIDIA releases new builds.
+- Expanded the end-of-installation summary with next steps and quick commands so new deployments are easier to verify.
+
+Changes in version 1.51
 - This version is a minor fix for driver source (megadl/wget) issue.
   - Split logic for legacy vs new drivers to fix download/patch issues introduced in v1.50.
   - v16.x–v17.x: use legacy mega.nz links with megadl and legacy install args `--dkms -m=kernel -s`.
