@@ -1055,18 +1055,19 @@ x-dls-variables: &dls-variables
 services:
   wvthoog-fastapi-dls:
     image: collinwebdesigns/fastapi-dls:latest
-    restart: always
     container_name: wvthoog-fastapi-dls
+    restart: always
+    working_dir: /app
     environment:
       <<: *dls-variables
+      PYTHONPATH: /app
     ports:
       - "${portnumber}:443"
-    init: true
     security_opt:
       - seccomp=unconfined
       - apparmor=unconfined
     command: >
-      uvicorn app.main:app
+      uvicorn main:app
       --host 0.0.0.0 --port 443
       --ssl-keyfile /app/cert/webserver.key
       --ssl-certfile /app/cert/webserver.crt
@@ -1080,12 +1081,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-    stop_grace_period: 20s
-    logging:
-      driver: "json-file"
-      options:
-        max-file: "5"
-        max-size: "10m"
 
 volumes:
   dls-db:
