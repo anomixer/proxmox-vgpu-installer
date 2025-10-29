@@ -12,6 +12,20 @@ Changes in version 1.7 (current release)
 - Expanded the end-of-installation summary with next steps and quick commands so new deployments are easier to verify.
 - Added 'Updated by' section to script for attribution of people updating the project
 
+Changes in version 1.61
+- This version is a minor update and fill with newer driver download URL.
+- Support driver version 19.2
+- Note: Currently there has no patch files available since driver version 19.1 (580.82.02). Please wait for the patch release.
+
+Changes in version 1.6 (Forked and Improved by LeonardSEO)
+- This version is improved with new script structure including driver matrix, patch mechanism, and new workflow, etc.
+- Replace the static driver matrix with a data-driven catalog that covers v16.0 through v19.1, including mirrors, checksums, and branch-specific install flags (--dkms -m=kernel -s for legacy ≤17.x, --dkms -s for v18.x+).
+- Detect and offer to run pve-nvidia-vgpu-helper, backport GNU patch 2.7.6 automatically when Debian 13's patch 2.8 triggers the "NUL byte" error, and make Secure Boot enrollment part of the workflow.
+- Emit branch-aware FastAPI-DLS warnings so users know vGPU ≥18.x needs gridd/nvlts unlock patches, and avoid surprise failures.
+- Externalize patch metadata via driver_patches.json, preventing hard-coded patch names and making future releases data-driven.
+- Refresh gpu_info.db (optional) with the latest RTX/Ada/Blackwell PCI IDs while preserving the legacy schema.
+- Update the README to reflect the new workflow and highlight the helper, secure boot, and branch guidance changes.
+
 Changes in version 1.51
 - This version is a minor fix for driver source (megadl/wget) issue.
   - Split logic for legacy vs new drivers to fix download/patch issues introduced in v1.50.
@@ -105,6 +119,7 @@ The `gpu_info.db` SQLite database contains GPU compatibility information for vGP
 ## To-Do
 1.  Replace FastAPI-DLS with nvlts (https://git.collinwebdesigns.de/vgpu/nvlts) in the future release. (current nvlts may not work).
 2.  Continue adding new GPU data to gpu_info.db as new models are released (RTX 5000 series desktop GPUs completed).
+
 
 
 
