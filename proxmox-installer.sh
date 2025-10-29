@@ -1088,7 +1088,7 @@ EOF
         # Issue docker-compose
         run_command "Running Docker Compose" "info" "docker-compose -f \"$fastapi_dir/docker-compose.yml\" up -d"
 
-        echo -e "${BLUE}[i]${NC} FastAPI-DLS health endpoint: http://$host_address:$portnumber/-/health"
+        echo -e "${BLUE}[i]${NC} FastAPI-DLS health endpoint: https://$host_address:$portnumber/-/health"
         echo -e "${BLUE}[i]${NC} Docker Compose defaults to the asyncio event loop for compatibility. Review $fastapi_dir/docker-compose.yml if you need uvloop." 
 
         # Create directory where license script (Windows/Linux are stored)
@@ -1098,17 +1098,28 @@ EOF
         # Create .sh file for Linux
         cat > "$VGPU_DIR/licenses/license_linux.sh" <<EOF
 #!/bin/bash
-
-curl -L -X GET "http://$host_address:$portnumber/-/client-token" -o /etc/nvidia/ClientConfigToken/client_configuration_token_\$(date '+%d-%m-%Y-%H-%M-%S').tok
+curl -k -L -X GET "https://$host_address:$portnumber/-/client-token" \
+  -o /etc/nvidia/ClientConfigToken/client_configuration_token_\$(date '+%d-%m-%Y-%H-%M-%S').tok
 service nvidia-gridd restart
 nvidia-smi -q | grep "License"
 EOF
 
         # Create .ps1 file for Windows
-        cat > "$VGPU_DIR/licenses/license_windows.ps1" <<EOF
-curl.exe -L -X GET "http://$host_address:$portnumber/-/client-token" -o "C:\Program Files\NVIDIA Corporation\vGPU Licensing\ClientConfigToken\client_configuration_token_\$(Get-Date -f 'dd-MM-yy-hh-mm-ss').tok"
-Restart-Service NVDisplay.ContainerLocalSystem
-& 'nvidia-smi' -q  | Select-String "License"
+        cat > "$VGPU_DIR/licenses/license_windows.ps1" <<'EOF'
+$ErrorActionPreference = "Stop"
+$dest = "C:\Program Files\NVIDIA Corporation\vGPU Licensing\ClientConfigToken\client_configuration_token_$(Get-Date -f 'dd-MM-yy-hh-mm-ss').tok"
+# Allow self-signed (like curl -k). This only affects this process:
+add-type @"
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(ServicePoint srvPoint, X509Certificate certificate, WebRequest request, int certificateProblem) { return true; }
+}
+"@
+[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+Invoke-WebRequest -Uri "https://$host_address:$portnumber/-/client-token" -OutFile $dest -UseBasicParsing
+Restart-Service NVDisplay.ContainerLocalSystem -Force
+& nvidia-smi -q | Select-String "License"
 EOF
 
         echo -e "${GREEN}[+]${NC} license_windows.ps1 and license_linux.sh created and stored in: $VGPU_DIR/licenses"
