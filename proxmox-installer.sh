@@ -1111,9 +1111,12 @@ echo "Token saved to: \$DEST"
 EOF
 
         # Create .ps1 file for Windows
-        cat > "$VGPU_DIR/licenses/license_windows.ps1" <<EOF
-\$ErrorActionPreference = "Stop"
-\$dest = "C:\\Program Files\\NVIDIA Corporation\\vGPU Licensing\\ClientConfigToken\\client_configuration_token_\$(Get-Date -f 'yyyyMMdd_HHmmss').tok"
+# Windows .ps1 — keep PS dollars intact, then inject host/port
+        cat > "$VGPU_DIR/licenses/license_windows.ps1" <<'EOF'
+$ErrorActionPreference = "Stop"
+$dest = "C:\Program Files\NVIDIA Corporation\vGPU Licensing\ClientConfigToken\client_configuration_token_$(Get-Date -f 'yyyyMMdd_HHmmss').tok"
+
+# Trust self-signed (process-local)
 add-type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -1123,10 +1126,15 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 "@
 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri "https://${host_address}:${portnumber}/-/client-token" -OutFile \$dest -UseBasicParsing
+
+Invoke-WebRequest -Uri "https://__DLS_HOST__:__DLS_PORT__/-/client-token" -OutFile $dest -UseBasicParsing
 Restart-Service NVDisplay.ContainerLocalSystem -Force -ErrorAction SilentlyContinue
 & nvidia-smi -q | Select-String -SimpleMatch "License"
 EOF
+
+# Inject resolved values
+sed -i "s|__DLS_HOST__|$host_address|g; s|__DLS_PORT__|$portnumber|g" "$VGPU_DIR/licenses/license_windows.ps1"
+
 
         echo -e "${GREEN}[+]${NC} license_windows.ps1 and license_linux.sh created and stored in: $VGPU_DIR/licenses"
         echo -e "${YELLOW}[-]${NC} Copy these files to your Windows or Linux VM's and execute"
