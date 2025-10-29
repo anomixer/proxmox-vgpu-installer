@@ -1102,7 +1102,7 @@ set -euo pipefail
 DEST_DIR="/etc/nvidia/ClientConfigToken"
 DEST="\${DEST_DIR}/client_configuration_token_\$(date +%Y%m%d_%H%M%S).tok"
 mkdir -p "\$DEST_DIR"
-curl -fsSLk "https://${DLS_URL}:${DLS_PORT}/-/client-token" -o "\$DEST"
+curl -fsSLk "https://${host_address}:${portnumber}/-/client-token" -o "\$DEST"
 if systemctl list-units --type=service 2>/dev/null | grep -qi nvidia-gridd; then
   systemctl restart nvidia-gridd
 fi
@@ -1123,7 +1123,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 "@
 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri "https://${DLS_URL}:${DLS_PORT}/-/client-token" -OutFile \$dest -UseBasicParsing
+Invoke-WebRequest -Uri "https://${host_address}:${portnumber}/-/client-token" -OutFile \$dest -UseBasicParsing
 Restart-Service NVDisplay.ContainerLocalSystem -Force -ErrorAction SilentlyContinue
 & nvidia-smi -q | Select-String -SimpleMatch "License"
 EOF
