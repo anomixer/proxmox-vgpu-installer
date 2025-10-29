@@ -1060,25 +1060,28 @@ services:
     environment:
       <<: *dls-variables
     ports:
-      - "$portnumber:443"
-    # Force asyncio loop (avoid uvloop under default confinement)
+      - "${portnumber}:443"
+    init: true
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
     command: >
       uvicorn app.main:app
       --host 0.0.0.0 --port 443
+      --ssl-keyfile /app/cert/webserver.key
+      --ssl-certfile /app/cert/webserver.crt
       --loop asyncio
     volumes:
       - dls-db:/app/database
-    init: true
-    # security_opt:
-    #   - seccomp=unconfined  # Optional fallback if you switch back to uvloop and hit seccomp denials
+      - /opt/docker/fastapi-dls/cert:/app/cert
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:443/-/health"]
+      test: ["CMD", "curl", "-k", "--fail", "https://127.0.0.1:443/-/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
     stop_grace_period: 20s
-    logging:  # optional, for those who do not need logs
+    logging:
       driver: "json-file"
       options:
         max-file: "5"
