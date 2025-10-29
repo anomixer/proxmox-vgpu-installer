@@ -10,6 +10,7 @@ Changes in version 1.7 (current release)
 - Improved patched driver discovery by tracking installer artifacts before and after patching to reliably capture renamed outputs.
 - Externalized patch-to-driver mapping in `driver_patches.json` to simplify maintenance when NVIDIA releases new builds.
 - Expanded the end-of-installation summary with next steps and quick commands so new deployments are easier to verify.
+- Added 'Updated by' section to script for attribution of people updating the project
 
 Changes in version 1.51
 - This version is a minor fix for driver source (megadl/wget) issue.
@@ -104,6 +105,7 @@ The `gpu_info.db` SQLite database contains GPU compatibility information for vGP
 ## To-Do
 1.  Replace FastAPI-DLS with nvlts (https://git.collinwebdesigns.de/vgpu/nvlts) in the future release. (current nvlts may not work).
 2.  Continue adding new GPU data to gpu_info.db as new models are released (RTX 5000 series desktop GPUs completed).
+
 
 
 
