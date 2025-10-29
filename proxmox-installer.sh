@@ -1055,20 +1055,32 @@ x-dls-variables: &dls-variables
 services:
   wvthoog-fastapi-dls:
     image: collinwebdesigns/fastapi-dls:latest
-    restart: always
     container_name: wvthoog-fastapi-dls
+    restart: always
+    working_dir: /app
     environment:
       <<: *dls-variables
+      PYTHONPATH: /app
     ports:
-      - "$portnumber:443"
+      - "${portnumber}:443"
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    command: >
+      uvicorn main:app
+      --host 0.0.0.0 --port 443
+      --ssl-keyfile /app/cert/webserver.key
+      --ssl-certfile /app/cert/webserver.crt
+      --loop asyncio
     volumes:
-      - /opt/docker/fastapi-dls/cert:/app/cert
       - dls-db:/app/database
-    logging:  # optional, for those who do not need logs
-      driver: "json-file"
-      options:
-        max-file: "5"
-        max-size: "10m"
+      - /opt/docker/fastapi-dls/cert:/app/cert
+    healthcheck:
+      test: ["CMD", "curl", "-k", "--fail", "https://127.0.0.1:443/-/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   dls-db:
@@ -1076,25 +1088,53 @@ EOF
         # Issue docker-compose
         run_command "Running Docker Compose" "info" "docker-compose -f \"$fastapi_dir/docker-compose.yml\" up -d"
 
+        echo -e "${BLUE}[i]${NC} FastAPI-DLS health endpoint: https://$host_address:$portnumber/-/health"
+        echo -e "${BLUE}[i]${NC} Docker Compose defaults to the asyncio event loop for compatibility. Review $fastapi_dir/docker-compose.yml if you need uvloop." 
+
         # Create directory where license script (Windows/Linux are stored)
         mkdir -p $VGPU_DIR/licenses
 
         echo -e "${GREEN}[+]${NC} Generate FastAPI-DLS Windows/Linux executables"
         # Create .sh file for Linux
         cat > "$VGPU_DIR/licenses/license_linux.sh" <<EOF
-#!/bin/bash
-
-curl --insecure -L -X GET "https://$host_address:$portnumber/-/client-token" -o /etc/nvidia/ClientConfigToken/client_configuration_token_\$(date '+%d-%m-%Y-%H-%M-%S').tok
-service nvidia-gridd restart
-nvidia-smi -q | grep "License"
+#!/usr/bin/env bash
+set -euo pipefail
+DEST_DIR="/etc/nvidia/ClientConfigToken"
+DEST="\${DEST_DIR}/client_configuration_token_\$(date +%Y%m%d_%H%M%S).tok"
+mkdir -p "\$DEST_DIR"
+curl -fsSLk "https://${host_address}:${portnumber}/-/client-token" -o "\$DEST"
+if systemctl list-units --type=service 2>/dev/null | grep -qi nvidia-gridd; then
+  systemctl restart nvidia-gridd
+fi
+nvidia-smi -q | grep -i license || true
+echo "Token saved to: \$DEST"
 EOF
 
         # Create .ps1 file for Windows
-        cat > "$VGPU_DIR/licenses/license_windows.ps1" <<EOF
-curl.exe --insecure -L -X GET "https://$host_address:$portnumber/-/client-token" -o "C:\Program Files\NVIDIA Corporation\vGPU Licensing\ClientConfigToken\client_configuration_token_\$(Get-Date -f 'dd-MM-yy-hh-mm-ss').tok"
-Restart-Service NVDisplay.ContainerLocalSystem
-& 'nvidia-smi' -q  | Select-String "License"
+# Windows .ps1 — keep PS dollars intact, then inject host/port
+        cat > "$VGPU_DIR/licenses/license_windows.ps1" <<'EOF'
+$ErrorActionPreference = "Stop"
+$dest = "C:\Program Files\NVIDIA Corporation\vGPU Licensing\ClientConfigToken\client_configuration_token_$(Get-Date -f 'yyyyMMdd_HHmmss').tok"
+
+# Trust self-signed (process-local)
+add-type @"
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(ServicePoint s, X509Certificate c, WebRequest r, int p) { return true; }
+}
+"@
+[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+Invoke-WebRequest -Uri "https://__DLS_HOST__:__DLS_PORT__/-/client-token" -OutFile $dest -UseBasicParsing
+Restart-Service NVDisplay.ContainerLocalSystem -Force -ErrorAction SilentlyContinue
+& nvidia-smi -q | Select-String -SimpleMatch "License"
 EOF
+
+# Inject resolved values
+sed -i "s|__DLS_HOST__|$host_address|g; s|__DLS_PORT__|$portnumber|g" "$VGPU_DIR/licenses/license_windows.ps1"
+
 
         echo -e "${GREEN}[+]${NC} license_windows.ps1 and license_linux.sh created and stored in: $VGPU_DIR/licenses"
         echo -e "${YELLOW}[-]${NC} Copy these files to your Windows or Linux VM's and execute"
