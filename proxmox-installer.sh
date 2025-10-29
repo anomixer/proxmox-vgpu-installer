@@ -1097,29 +1097,35 @@ EOF
         echo -e "${GREEN}[+]${NC} Generate FastAPI-DLS Windows/Linux executables"
         # Create .sh file for Linux
         cat > "$VGPU_DIR/licenses/license_linux.sh" <<EOF
-#!/bin/bash
-curl -k -L -X GET "https://$host_address:$portnumber/-/client-token" \
-  -o /etc/nvidia/ClientConfigToken/client_configuration_token_\$(date '+%d-%m-%Y-%H-%M-%S').tok
-service nvidia-gridd restart
-nvidia-smi -q | grep "License"
+#!/usr/bin/env bash
+set -euo pipefail
+DEST_DIR="/etc/nvidia/ClientConfigToken"
+DEST="\${DEST_DIR}/client_configuration_token_\$(date +%Y%m%d_%H%M%S).tok"
+mkdir -p "\$DEST_DIR"
+curl -fsSLk "https://${DLS_URL}:${DLS_PORT}/-/client-token" -o "\$DEST"
+if systemctl list-units --type=service 2>/dev/null | grep -qi nvidia-gridd; then
+  systemctl restart nvidia-gridd
+fi
+nvidia-smi -q | grep -i license || true
+echo "Token saved to: \$DEST"
 EOF
 
         # Create .ps1 file for Windows
-        cat > "$VGPU_DIR/licenses/license_windows.ps1" <<'EOF'
-$ErrorActionPreference = "Stop"
-$dest = "C:\Program Files\NVIDIA Corporation\vGPU Licensing\ClientConfigToken\client_configuration_token_$(Get-Date -f 'dd-MM-yy-hh-mm-ss').tok"
-# Allow self-signed (like curl -k). This only affects this process:
+        cat > "$VGPU_DIR/licenses/license_windows.ps1" <<EOF
+\$ErrorActionPreference = "Stop"
+\$dest = "C:\\Program Files\\NVIDIA Corporation\\vGPU Licensing\\ClientConfigToken\\client_configuration_token_\$(Get-Date -f 'yyyyMMdd_HHmmss').tok"
 add-type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
-    public bool CheckValidationResult(ServicePoint srvPoint, X509Certificate certificate, WebRequest request, int certificateProblem) { return true; }
+    public bool CheckValidationResult(ServicePoint s, X509Certificate c, WebRequest r, int p) { return true; }
 }
 "@
 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-Invoke-WebRequest -Uri "https://$host_address:$portnumber/-/client-token" -OutFile $dest -UseBasicParsing
-Restart-Service NVDisplay.ContainerLocalSystem -Force
-& nvidia-smi -q | Select-String "License"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-WebRequest -Uri "https://${DLS_URL}:${DLS_PORT}/-/client-token" -OutFile \$dest -UseBasicParsing
+Restart-Service NVDisplay.ContainerLocalSystem -Force -ErrorAction SilentlyContinue
+& nvidia-smi -q | Select-String -SimpleMatch "License"
 EOF
 
         echo -e "${GREEN}[+]${NC} license_windows.ps1 and license_linux.sh created and stored in: $VGPU_DIR/licenses"
