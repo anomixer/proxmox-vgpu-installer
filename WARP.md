@@ -9,8 +9,10 @@ This repository contains a Bash script that configures Proxmox 8 or 9 servers to
 ## Architecture and Core Components
 
 ### Main Scripts
-- `proxmox-installer.sh` - Current installer (v1.51, minor fix for megadl/wget issue)
-- `old/proxmox-installer-v1.5.sh` - Previous version (supports Proxmox 7/8/9, comprehensive driver support)
+- `proxmox-installer.sh` - Current installer (v1.61, support driver version 19.2)
+- `old/proxmox-installer-v1.6.sh` - Forker's version (new driver matrix, patch mechanism, and new workflow, etc.)
+- `old/proxmox-installer-v1.51.sh` - Previous version (supports Proxmox 7/8/9, comprehensive driver support)
+- `old/proxmox-installer-v1.5.sh` - Old version (supports Proxmox 7/8/9, comprehensive driver support)
 - `old/proxmox-installer-v1.4.sh` - Older version (Proxmox 8/9, driver versions 18.3, 18.4, 19.0, 19.1)
 - `old/proxmox-installer-v1.3.sh` - Older version
 - `old/proxmox-installer-v1.2.sh` - Older version
