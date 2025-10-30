@@ -9,7 +9,10 @@ This repository contains a comprehensive Bash script that automates the installa
 ## Architecture and Core Components
 
 ### Main Scripts
-- `proxmox-installer.sh` - Current installer (v1.7, support driver versions 16.x through 19.x)
+- `proxmox-installer.sh` - Current installer (v1.72, supports driver 16.x-19.x with smart download and new sources repository support)
+- `old/proxmox-installer-v1.71.sh` - Previous version with driver updates
+- `old/proxmox-installer-v1.7.sh` - Forker's version with guest driver catalog integration
+- `old/proxmox-installer-v1.61.sh` - add driver 19.2
 - `old/proxmox-installer-v1.6.sh` - Forker's version with new driver matrix and patch mechanism
 - `old/proxmox-installer-v1.51.sh` - Previous version with comprehensive driver support
 - `old/proxmox-installer-v1.5.sh` - Legacy version with Proxmox 7/8/9 support
@@ -24,11 +27,17 @@ This repository contains a comprehensive Bash script that automates the installa
 - `gpu_info.db` - SQLite database containing GPU compatibility information (PCI device IDs, vGPU capabilities, supported driver versions)
 - `driver_patches.json` - Externalized patch-to-driver mapping for simplified maintenance
 
+### Repository Format Support (v1.72+)
+- **Legacy `*.list` format**: Used by Proxmox 7.x and 8.x (Debian 11/12)
+- **Modern `*.sources` format**: Used by Proxmox 9.x (Debian 13/trixie)
+- **Intelligent Detection**: Automatic format selection based on system version
+- **Enterprise Repository Handling**: Enhanced disabling mechanism for both formats
+
 ### Installation Process Architecture
 The installer follows a comprehensive multi-step workflow:
 
 1. **Step 1**: System preparation
-   - APT repository configuration for Proxmox no-subscription
+   - **Enhanced APT repository configuration** (v1.72+): Automatic format detection and configuration
    - GPU detection and compatibility checking against `gpu_info.db`
    - GRUB/boot configuration for IOMMU (intel_iommu=on/amd_iommu=on)
    - Kernel module setup and secure boot integration
@@ -38,7 +47,7 @@ The installer follows a comprehensive multi-step workflow:
 2. **Reboot Required**: System restart to apply kernel changes
 
 3. **Step 2**: Driver installation and finalization
-   - NVIDIA driver download with MD5 verification
+   - **Smart driver download with existence checking and MD5 verification** (v1.72+)
    - Driver patching for vgpu_unlock scenarios (if needed)
    - SR-IOV configuration and systemd service management
    - Guest driver catalog integration and download
@@ -71,7 +80,7 @@ sudo bash proxmox-installer.sh --url "https://example.com/driver.run"
 
 ### Maintenance Operations
 ```bash
-# Download drivers only (option 4 in menu)
+# Download drivers only (option 4 in menu) - includes smart download logic
 sudo bash proxmox-installer.sh
 # Select option 4
 
@@ -110,10 +119,10 @@ systemctl status nvidia-vgpu-mgr.service
 ## Development Context
 
 ### Driver Version Mapping
-The installer (v1.7) supports these NVIDIA driver versions:
+The installer supports these NVIDIA driver versions:
 
 **v19.x Series** (Native vGPU Only):
-- **19.2**: 580.95.02 (community mirror, patch files not yet available)
+- **19.2**: 580.95.02 (supports RTX PRO 6000D)
 - **19.1**: 580.82.02 (supports RTX PRO 6000 Blackwell Server Edition)
 - **19.0**: 580.65.05 (recommended for Proxmox 8/9)
 
@@ -171,12 +180,24 @@ The installer (v1.7) supports these NVIDIA driver versions:
 
 ### Important Implementation Notes
 
+#### Smart Driver Download Management (v1.72+)
+- **File Existence Check**: Before downloading, checks if driver file already exists locally
+- **MD5 Verification**: Validates existing files against expected checksums from driver registry
+- **Intelligent Decision Making**:
+  - **File exists and MD5 matches**: Skips download with informative message
+  - **File exists but MD5 mismatches**: Backs up old file as `.bak` and re-downloads
+  - **File doesn't exist**: Proceeds with normal download process
+- **User Feedback**: Clear notifications about download decisions and file status
+- **Backup Mechanism**: Existing files are safely backed up before re-downloading
+- **Unified Logic**: Same smart download logic applies to both main installation and option 4 downloads
+
 #### Driver Download Strategy (v1.5+)
 - **Legacy (v16.x–v17.x)**: mega.nz + megadl; install args `--dkms -m=kernel -s`
 - **v18.0–v18.1**: mega.nz + megadl; install args `--dkms -s`
 - **v18.3+ and 19.x**: alist.homelabproject.cc + wget/curl; install args `--dkms -s`
 - Auto-detects download tool by URL; installs megatools on demand
 - MD5 checksum validation for all downloaded drivers
+- Smart file management with existence checking (v1.72+)
 
 #### Secure Boot Support (v1.6+)
 - Automatic detection of Secure Boot state
@@ -209,6 +230,7 @@ Installation state is persisted in `config.txt` allowing:
 - Configuration persistence for troubleshooting
 
 ### User Experience Improvements (v1.5+)
+- **Smart Download Logic** (v1.72+): File existence checking and MD5 verification with intelligent skipping
 - **Refined Driver Selection Menu**: Clean, streamlined display with compatibility annotations
 - **Smart Platform Detection**: Automatic Proxmox version detection with driver recommendations
 - **Compatibility Warnings**: Clear notices about FastAPI-DLS requirements for different vGPU versions
@@ -222,6 +244,7 @@ The script includes comprehensive error checking:
 - Graceful fallbacks for missing dependencies
 - MD5 checksum validation with corruption detection
 - Network connectivity and download reliability checks
+- Smart download decision making with user feedback
 - Graceful handling of missing patch files
 
 ### Security Considerations
@@ -231,6 +254,7 @@ The script includes comprehensive error checking:
 - Creates isolated Docker containers for licensing (network exposure consideration)
 - Generates and manages custom SSL certificates for FastAPI-DLS
 - Safe handling of patch files with integrity checks
+- Smart file management with backup mechanisms
 
 ### Platform Compatibility
 - **Proxmox VE 7.x**: Legacy mode with v16.x/v17.0 drivers, bypasses `pve-nvidia-vgpu-helper`
@@ -240,6 +264,7 @@ The script includes comprehensive error checking:
 - **AMD Platforms**: Supports AMD-Vi IOMMU with `amd_iommu=on iommu=pt`
 - **GPU Architectures**: Works with Pascal, Turing, Ampere, Ada Lovelace, and Blackwell architectures
 - **Mixed Driver Sources**: alist.homelabproject.cc (current) and mega.nz (legacy/fork versions)
+- **Smart Downloads**: Works with both cached and fresh downloads across all supported platforms
 
 ### Database Schema
 The `gpu_info.db` SQLite database uses the following schema:
@@ -250,7 +275,28 @@ The `gpu_info.db` SQLite database uses the following schema:
 - `driver`: Supported driver versions (semicolon-separated)
 - `chip`: GPU architecture (Pascal, Turing, Ampere, etc.)
 
-### Recent Updates (v1.7)
+### Recent Updates
+
+#### v1.73 (Current)
+
+#### v1.72 (Previous)
+- **Major Enhancement**: Added support for Debian 13 (trixie) and Proxmox 9's new `*.sources` repository format
+- **Intelligent Format Detection**: Automatically detects system version and chooses between `*.sources` (trixie+) and `*.list` (legacy) formats
+- **Enhanced Enterprise Repository Handling**: Properly handles `Enabled: false` for `*.sources` format and commenting for `*.list` format
+- **GPG Security**: Includes proper `Signed-By` keyring references (`/usr/share/keyrings/proxmox-archive-keyring.gpg`) for secure repository access
+- **Backward Compatibility**: Maintains full compatibility with Proxmox 7.x and 8.x systems
+- **Improved Repository Configuration**: Modular functions for better maintainability and error handling
+- **Major Enhancement**: Added intelligent driver download management with file existence checking and MD5 verification
+- **Smart Download Logic**: The installer now checks if driver files already exist locally before downloading
+- **MD5 Verification**: Automatically validates existing files against expected checksums
+- **Download Optimization**: Skips downloads when files are valid, re-downloads only when checksum mismatches occur
+- **Backup Mechanism**: Existing files are backed up as .bak files before re-downloading
+- **Unified Implementation**: Same smart download logic applied to both main installation (perform_step_two) and option 4 (driver downloads)
+- **Enhanced User Feedback**: Clear notifications about download decisions and file status
+- **Performance Optimization**: Reduces unnecessary downloads and bandwidth usage for repeat installations
+- All code comments converted to English for better internationalization
+
+#### v1.7
 - Added built-in guest driver catalog with automatic download prompts
 - Improved patched driver discovery with artifact tracking
 - Externalized patch-to-driver mapping in `driver_patches.json`
@@ -265,11 +311,32 @@ For testing new features or driver versions:
 3. Verify database queries with `sqlite3 gpu_info.db`
 4. Test with `--step 1` and `--step 2` for incremental debugging
 5. Use `--file` parameter for testing with pre-downloaded drivers
+6. Test smart download functionality by intentionally creating checksum mismatches
+7. Verify backup mechanism by checking for .bak files after re-downloads
+
+### Testing Smart Download Features (v1.73+)
+```bash
+# Test with existing valid file
+touch NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run
+# Should skip download and show matching MD5 message
+
+# Test with existing invalid file
+echo "invalid content" > NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run
+# Should backup file and re-download
+
+# Test with non-existent file
+rm -f NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run
+# Should proceed with normal download
+```
 
 ### Troubleshooting Common Issues
 - **Patch compatibility**: Automatic patch 2.7.6 installation for Debian 13
+- **Repository format conflicts** (v1.72+): Automatic handling of `*.list` vs `*.sources` format detection
+- **Enterprise repository conflicts** (v1.72+): Proper disabling with `Enabled: false` or commenting based on format
 - **Download failures**: Automatic fallback between curl/wget/megadl
+- **Smart download issues** (v1.73+): Check file permissions and MD5 registry values
 - **Secure Boot issues**: MOK enrollment process guidance
 - **GPU detection**: Database queries and compatibility checking
 - **Service conflicts**: Proper systemd service management
 - **Network issues**: Robust download retry and validation mechanisms
+- **File corruption**: Smart download automatically re-downloads corrupted files

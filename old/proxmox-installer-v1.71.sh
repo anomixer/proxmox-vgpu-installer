@@ -13,7 +13,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.72
+SCRIPT_VERSION=1.71
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -102,23 +102,23 @@ load_static_guest_driver_catalog() {
 15.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.1/NVIDIA-Linux-x86_64-525.85.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.1/528.24_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
 15.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.0/NVIDIA-Linux-x86_64-525.60.13-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU15.0/527.41_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
 14.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.4/NVIDIA-Linux-x86_64-510.108.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.4/514.08_grid_win10_win11_server2019_server2022_64bit_international.exe
-14.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.3/NVIDIA-Linux-x86_64-510.108.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.3/513.91_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-14.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.2/NVIDIA-Linux-x86_64-510.85.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.2/513.46_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+14.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.3/NVIDIA-Linux-x86_64-510.108.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.3/513.91_grid_win10_win11_server2019_server2022_64bit_international.exe
+14.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.2/NVIDIA-Linux-x86_64-510.85.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.2/513.46_grid_win10_win11_server2019_server2022_64bit_international.exe
 14.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.1/NVIDIA-Linux-x86_64-510.73.08-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.1/512.78_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
-14.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.0/NVIDIA-Linux-x86_64-510.47.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.0/511.65_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
+14.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.0/NVIDIA-Linux-x86_64-510.47.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU14.0/511.65_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
 13.12|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.12/NVIDIA-Linux-x86_64-470.256.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.12/475.14_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
-13.11|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.11/NVIDIA-Linux-x86_64-470.256.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.11/475.06_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.10|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.10/NVIDIA-Linux-x86_64-470.239.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.10/474.82_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.9|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.9/NVIDIA-Linux-x86_64-470.223.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.9/474.64_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.8|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.8/NVIDIA-Linux-x86_64-470.199.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.8/474.44_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.7|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.7/NVIDIA-Linux-x86_64-470.182.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.7/474.30_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.6|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.6/NVIDIA-Linux-x86_64-470.161.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.6/474.14_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.5|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.5/NVIDIA-Linux-x86_64-470.161.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.5/474.04_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.4/NVIDIA-Linux-x86_64-470.141.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.4/473.81_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.3/NVIDIA-Linux-x86_64-470.129.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.3/473.47_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
-13.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.2/NVIDIA-Linux-x86_64-470.103.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.2/472.98_grid_win10_win11_server2016_server2019_server2022_dch_64bit_international.exe
+13.11|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.11/NVIDIA-Linux-x86_64-470.256.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.11/475.06_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.10|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.10/NVIDIA-Linux-x86_64-470.239.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.10/474.82_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.9|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.9/NVIDIA-Linux-x86_64-470.223.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.9/474.64_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.8|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.8/NVIDIA-Linux-x86_64-470.199.02-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.8/474.44_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.7|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.7/NVIDIA-Linux-x86_64-470.182.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.7/474.30_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.6|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.6/NVIDIA-Linux-x86_64-470.161.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.6/474.14_grid_win10_win11_server2019_server2022_64bit_international.exe
+13.5|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.5/NVIDIA-Linux-x86_64-470.161.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.5/474.04_grid_win10_win11_server2019_server2022_64bit_international.exe
+13.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.4/NVIDIA-Linux-x86_64-470.141.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.4/473.81_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.3/NVIDIA-Linux-x86_64-470.129.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.3/473.47_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
+13.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.2/NVIDIA-Linux-x86_64-470.103.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU13.2/472.98_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
 13.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.1/NVIDIA-Linux-x86_64-470.82.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.1/472.39_grid_win10_win11_server2016_server2019_server2022_64bit_international.exe
-13.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.0/NVIDIA-Linux-x86_64-470.63.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.0/471.68_grid_win10_server2016_server2019_server2022_dch_64bit_international.exe
+13.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.0/NVIDIA-Linux-x86_64-470.63.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID13.0/471.68_grid_win10_server2016_server2019_server2022_64bit_international.exe
 12.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.4/NVIDIA-Linux-x86_64-460.106.00-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.4/463.15_grid_win10_server2016_server2019_64bit_international.exe
 12.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.3/NVIDIA-Linux-x86_64-460.91.03-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.3/462.96_grid_win10_server2016_server2019_64bit_international.exe
 12.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.2/NVIDIA-Linux-x86_64-460.73.01-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID12.2/462.31_grid_win10_server2016_server2019_64bit_international.exe
@@ -513,39 +513,6 @@ ensure_patch_compat() {
     export PATH="/usr/local/bin:$PATH"
 }
 
-# Function to download driver file with error handling
-download_driver_file() {
-    local driver_url="$1"
-    local driver_filename="$2"
-
-    if [[ "$driver_url" == https://mega.nz/* ]]; then
-        if ! command -v megadl >/dev/null 2>&1; then
-            echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
-            exit 1
-        fi
-
-        if ! megadl "$driver_url"; then
-            echo -e "${RED}[!]${NC} Download failed."
-            exit 1
-        fi
-    else
-        if command -v curl >/dev/null 2>&1; then
-            if ! curl -fSL "$driver_url" -o "$driver_filename"; then
-                echo -e "${RED}[!]${NC} Download failed."
-                exit 1
-            fi
-        elif command -v wget >/dev/null 2>&1; then
-            if ! wget -O "$driver_filename" "$driver_url"; then
-                echo -e "${RED}[!]${NC} Download failed."
-                exit 1
-            fi
-        else
-            echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
-            exit 1
-        fi
-    fi
-}
-
 register_driver() {
     local branch="$1"
     local label="$2"
@@ -586,29 +553,29 @@ register_driver() {
 }
 
 # Driver registry (URLs requiring authenticated access are left empty for manual supply)
-register_driver "19.2" "19.2 (580.95.02)" "NVIDIA-Linux-x86_64-580.95.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.2/NVIDIA-GRID-Linux-KVM-580.95.02-580.95.05-581.42/Host_Drivers/NVIDIA-Linux-x86_64-580.95.02-vgpu-kvm.run" "9447d6f2e3c73e5fd84c0368444fa1d8" "" "Native GPUs only"
-register_driver "19.1" "19.1 (580.82.02)" "NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Host_Drivers/NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run" "fe3ecc481c3332422f33b6fab1d51a36" "" "Native GPUs only"
-register_driver "19.0" "19.0 (580.65.05)" "NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Host_Drivers/NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" "c75f6465338f0178fcbffe654b5e2086" "" "Native GPUs only"
-register_driver "18.4" "18.4 (570.172.07)" "NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Host_Drivers/NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" "5b370637f2aaf2f1828027aeaabafff9" "" "Native GPUs only"
-register_driver "18.3" "18.3 (570.158.02)" "NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Host_Drivers/NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" "c68a523bb835ea753bab2c1e9055d610" "" "Native GPUs only"
-register_driver "18.2" "18.2 (570.148.06)" "NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.2/NVIDIA-GRID-Linux-KVM-570.148.06-570.148.08-573.07/Host_Drivers/NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "31bbade9f2827490ff86ab777178229d" "" "Native GPUs only"
-register_driver "18.1" "18.1 (570.133.10)" "NVIDIA-Linux-x86_64-570.133.10-vgpu-kvm.run" "https://mega.nz/file/0YpHTAxJ#_XMpdJ68w3sM72p87kYSiEQXFA5BbFZl_xvF_XZSd4k" "f435eacdbe3c8002ccad14bd62c9bd2d" "" "Native GPUs only"
-register_driver "18.0" "18.0 (570.124.03)" "NVIDIA-Linux-x86_64-570.124.03-vgpu-kvm.run" "https://mega.nz/file/RUxgjLRZ#aDy-DWKJXg-rTrisraE2MKrKbl1jbX4-13L0W32fiHQ" "1804b889e27b7f868afb5521d871b095" "" "Turing GPUs"
-register_driver "17.6" "17.6 (550.163.02)" "NVIDIA-Linux-x86_64-550.163.02-vgpu-kvm.run" "https://mega.nz/file/NAYAGYpL#en-eYfid3GYmHkGVCAUagc6P2rbdw1Y2E9-7hOW19m8" "093036d83baf879a4bb667b484597789" "" "Native GPUs only"
-register_driver "17.5" "17.5 (550.144.02)" "NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run" "https://mega.nz/file/sYQ10b4b#hfGVeRog1pmNyx63N_I-siFENBWZj3w_ZQDsjW4PzW4" "37016ba868a0b4390c38aebbacfba09e" "" "Turing GPUs"
-register_driver "17.4" "17.4 (550.127.06)" "NVIDIA-Linux-x86_64-550.127.06-vgpu-kvm.run" "https://mega.nz/file/VJIVTBiB#nFOU3zkoWyk4Dq1eW-y2dWUQ-YuvxVh_PYXT3bzdfYE" "400b1b2841908ea36fd8f7fdbec18401" "" "Turing GPUs"
-register_driver "17.3" "17.3 (550.90.05)" "NVIDIA-Linux-x86_64-550.90.05-vgpu-kvm.run" "https://mega.nz/file/1dYWAaDJ#9lGnw1CccnIcH7n7UAZ5nfGt3yUXcen72nOUiztw-RU" "a3cddad85eee74dc15dbadcbe30dcf3a" "" "Turing GPUs"
-register_driver "17.1" "17.1 (550.54.16)" "NVIDIA-Linux-x86_64-550.54.16-vgpu-kvm.run" "https://mega.nz/file/sAYwDS7S#eyIeE_GYk_A0hwhayj3nOpcybLV_KAokJwXifDMQtPQ" "4d78514599c16302a0111d355dbf11e3" "" "Turing GPUs"
-register_driver "17.0" "17.0 (550.54.10)" "NVIDIA-Linux-x86_64-550.54.10-vgpu-kvm.run" "https://mega.nz/file/JjtyXRiC#cTIIvOIxu8vf-RdhaJMGZAwSgYmqcVEKNNnRRJTwDFI" "5f5e312cbd5bb64946e2a1328a98c08d" "" "Turing GPUs"
-register_driver "16.9" "16.9 (535.230.02)" "NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run" "https://mega.nz/file/JFYDETBa#IqaXaoqrPAmSZSjbAXCWvHtiUxU0n9O7RJF8Xu5HXIo" "3f6412723880aa5720b44cf0a9a13009" "" "Pascal or older GPUs"
-register_driver "16.8" "16.8 (535.216.01)" "NVIDIA-Linux-x86_64-535.216.01-vgpu-kvm.run" "https://mega.nz/file/gJBGSZxK#cqyK3KCsfB0mYL8QCsV6P5C9ABmUcV7bQgE9DQ4_8O4" "18627628e749f893cd2c3635452006a46" "" "Pascal or older GPUs"
-register_driver "16.7" "16.7 (535.183.04)" "NVIDIA-Linux-x86_64-535.183.04-vgpu-kvm.run" "https://mega.nz/file/gIwxGSyJ#xDcaxkymYcNFUTzwZ_m1HWcTgQrMSofJLPYMU-YGLMo" "68961f01a2332b613fe518afd4bfbfb2" "" "Pascal or older GPUs"
-register_driver "16.5" "16.5 (535.161.05)" "NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" "https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20" "bad6e09aeb58942750479f091bb9c4b6" "" "Pascal or older GPUs"
-register_driver "16.4" "16.4 (535.161.05)" "NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" "https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20" "bad6e09aeb58942750479f091bb9c4b6" "" "Pascal or older GPUs"
-register_driver "16.3" "16.3 (535.154.02)" "NVIDIA-Linux-x86_64-535.154.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/16.3/NVIDIA-GRID-Linux-KVM-535.154.02-535.154.05-538.15/Host_Drivers/NVIDIA-Linux-x86_64-535.154.02-vgpu-kvm.run" "a2d70f262e413023e97b2c56347f3544" "" "Pascal or older GPUs"
-register_driver "16.2" "16.2 (535.129.03)" "NVIDIA-Linux-x86_64-535.129.03-vgpu-kvm.run" "https://mega.nz/file/EyEXTbbY#J9FUQL1Mo4ZpNyDijStEH4bWn3AKwnSAgJEZcxUnOiQ" "0048208a62bacd2a7dd12fa736aa5cbb" "" "Pascal or older GPUs"
-register_driver "16.1" "16.1 (535.104.06)" "NVIDIA-Linux-x86_64-535.104.06-vgpu-kvm.run" "https://mega.nz/file/wy1WVCaZ#Yq2Pz_UOfydHy8nC_X_nloR4NIFC1iZFHqJN0EiAicU" "1020ad5b89fa0570c27786128385ca48" "" "Pascal or older GPUs"
-register_driver "16.0" "16.0 (535.54.06)" "NVIDIA-Linux-x86_64-535.54.06-vgpu-kvm.run" "https://mega.nz/file/xrNCCAaT#UuUjqRap6urvX4KA1m8-wMTCW5ZwuWKUj6zAB4-NPSo" "b892f75f8522264bc176f5a555acb176" "" "Pascal or older GPUs"
+register_driver "19.2" "19.2 (580.95.02)" "NVIDIA-Linux-x86_64-580.95.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.2/NVIDIA-GRID-Linux-KVM-580.95.02-580.95.05-581.42/Host_Drivers/NVIDIA-Linux-x86_64-580.95.02-vgpu-kvm.run" "9447d6f2e3c73e5fd84c0368444fa1d8" "" "community mirror"
+register_driver "19.1" "19.1 (580.82.02)" "NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Host_Drivers/NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run" "fe3ecc481c3332422f33b6fab1d51a36" "" "community mirror"
+register_driver "19.0" "19.0 (580.65.05)" "NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Host_Drivers/NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" "c75f6465338f0178fcbffe654b5e2086" "" "community mirror"
+register_driver "18.4" "18.4 (570.172.07)" "NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Host_Drivers/NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" "5b370637f2aaf2f1828027aeaabafff9" "" "community mirror"
+register_driver "18.3" "18.3 (570.158.02)" "NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Host_Drivers/NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" "c68a523bb835ea753bab2c1e9055d610" "" "community mirror"
+register_driver "18.2" "18.2 (570.148.06)" "NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.2/NVIDIA-GRID-Linux-KVM-570.148.06-570.148.08-573.07/Host_Drivers/NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "31bbade9f2827490ff86ab777178229d" "" "community mirror"
+register_driver "18.1" "18.1 (570.133.10)" "NVIDIA-Linux-x86_64-570.133.10-vgpu-kvm.run" "https://mega.nz/file/0YpHTAxJ#_XMpdJ68w3sM72p87kYSiEQXFA5BbFZl_xvF_XZSd4k" "f435eacdbe3c8002ccad14bd62c9bd2d" "" "mega.nz mirror"
+register_driver "18.0" "18.0 (570.124.03)" "NVIDIA-Linux-x86_64-570.124.03-vgpu-kvm.run" "https://mega.nz/file/RUxgjLRZ#aDy-DWKJXg-rTrisraE2MKrKbl1jbX4-13L0W32fiHQ" "1804b889e27b7f868afb5521d871b095" "" "mega.nz mirror"
+register_driver "17.6" "17.6 (550.163.02)" "NVIDIA-Linux-x86_64-550.163.02-vgpu-kvm.run" "https://mega.nz/file/NAYAGYpL#en-eYfid3GYmHkGVCAUagc6P2rbdw1Y2E9-7hOW19m8" "093036d83baf879a4bb667b484597789" "" "mega.nz mirror"
+register_driver "17.5" "17.5 (550.144.02)" "NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run" "https://mega.nz/file/sYQ10b4b#hfGVeRog1pmNyx63N_I-siFENBWZj3w_ZQDsjW4PzW4" "37016ba868a0b4390c38aebbacfba09e" "" "mega.nz mirror"
+register_driver "17.4" "17.4 (550.127.06)" "NVIDIA-Linux-x86_64-550.127.06-vgpu-kvm.run" "https://mega.nz/file/VJIVTBiB#nFOU3zkoWyk4Dq1eW-y2dWUQ-YuvxVh_PYXT3bzdfYE" "400b1b2841908ea36fd8f7fdbec18401" "" "mega.nz mirror"
+register_driver "17.3" "17.3 (550.90.05)" "NVIDIA-Linux-x86_64-550.90.05-vgpu-kvm.run" "https://mega.nz/file/1dYWAaDJ#9lGnw1CccnIcH7n7UAZ5nfGt3yUXcen72nOUiztw-RU" "a3cddad85eee74dc15dbadcbe30dcf3a" "" "mega.nz mirror"
+register_driver "17.1" "17.1 (550.54.16)" "NVIDIA-Linux-x86_64-550.54.16-vgpu-kvm.run" "https://mega.nz/file/sAYwDS7S#eyIeE_GYk_A0hwhayj3nOpcybLV_KAokJwXifDMQtPQ" "4d78514599c16302a0111d355dbf11e3" "" "mega.nz mirror"
+register_driver "17.0" "17.0 (550.54.10)" "NVIDIA-Linux-x86_64-550.54.10-vgpu-kvm.run" "https://mega.nz/file/JjtyXRiC#cTIIvOIxu8vf-RdhaJMGZAwSgYmqcVEKNNnRRJTwDFI" "5f5e312cbd5bb64946e2a1328a98c08d" "" "mega.nz mirror"
+register_driver "16.9" "16.9 (535.230.02)" "NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run" "https://mega.nz/file/JFYDETBa#IqaXaoqrPAmSZSjbAXCWvHtiUxU0n9O7RJF8Xu5HXIo" "3f6412723880aa5720b44cf0a9a13009" "" "mega.nz mirror"
+register_driver "16.8" "16.8 (535.216.01)" "NVIDIA-Linux-x86_64-535.216.01-vgpu-kvm.run" "https://mega.nz/file/gJBGSZxK#cqyK3KCsfB0mYL8QCsV6P5C9ABmUcV7bQgE9DQ4_8O4" "18627628e749f893cd2c3635452006a46" "" "mega.nz mirror"
+register_driver "16.7" "16.7 (535.183.04)" "NVIDIA-Linux-x86_64-535.183.04-vgpu-kvm.run" "https://mega.nz/file/gIwxGSyJ#xDcaxkymYcNFUTzwZ_m1HWcTgQrMSofJLPYMU-YGLMo" "68961f01a2332b613fe518afd4bfbfb2" "" "mega.nz mirror"
+register_driver "16.5" "16.5 (535.161.05)" "NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" "https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20" "bad6e09aeb58942750479f091bb9c4b6" "" "mega.nz mirror"
+register_driver "16.4" "16.4 (535.161.05)" "NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" "https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20" "bad6e09aeb58942750479f091bb9c4b6" "" "mega.nz mirror"
+register_driver "16.3" "16.3 (535.154.02)" "NVIDIA-Linux-x86_64-535.154.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/16.3/NVIDIA-GRID-Linux-KVM-535.154.02-535.154.05-538.15/Host_Drivers/NVIDIA-Linux-x86_64-535.154.02-vgpu-kvm.run" "a2d70f262e413023e97b2c56347f3544" "" "community mirror"
+register_driver "16.2" "16.2 (535.129.03)" "NVIDIA-Linux-x86_64-535.129.03-vgpu-kvm.run" "https://mega.nz/file/EyEXTbbY#J9FUQL1Mo4ZpNyDijStEH4bWn3AKwnSAgJEZcxUnOiQ" "0048208a62bacd2a7dd12fa736aa5cbb" "" "mega.nz mirror"
+register_driver "16.1" "16.1 (535.104.06)" "NVIDIA-Linux-x86_64-535.104.06-vgpu-kvm.run" "https://mega.nz/file/wy1WVCaZ#Yq2Pz_UOfydHy8nC_X_nloR4NIFC1iZFHqJN0EiAicU" "1020ad5b89fa0570c27786128385ca48" "" "mega.nz mirror"
+register_driver "16.0" "16.0 (535.54.06)" "NVIDIA-Linux-x86_64-535.54.06-vgpu-kvm.run" "https://mega.nz/file/xrNCCAaT#UuUjqRap6urvX4KA1m8-wMTCW5ZwuWKUj6zAB4-NPSo" "b892f75f8522264bc176f5a555acb176" "" "mega.nz mirror"
 
 # Config helpers
 ensure_config_file() {
@@ -688,83 +655,6 @@ detect_os_codename() {
     echo "$codename"
 }
 
-# Check if system is trixie or newer (supports *.sources format)
-is_trixie_or_newer() {
-    local codename="$1"
-    
-    case "$codename" in
-        trixie)
-            return 0
-            ;;
-        *)
-            # If version cannot be identified, conservatively assume it's an older version
-            return 1
-            ;;
-    esac
-}
-
-# Create traditional *.list format repository
-create_legacy_list_repo() {
-    local repo_name="$1"
-    local repo_line="$2"
-    
-    echo -e "${GREEN}[+]${NC} Configuring ${repo_name} repository (legacy *.list format): ${repo_line}"
-    printf '%s\n' "$repo_line" > "/etc/apt/sources.list.d/${repo_name}.list"
-}
-
-# Create new *.sources format repository
-create_sources_repo() {
-    local repo_name="$1"
-    local uri="$2"
-    local suite="$3"
-    local components="$4"
-    
-    echo -e "${GREEN}[+]${NC} Configuring ${repo_name} repository (modern *.sources format)"
-    
-    local sources_file="/etc/apt/sources.list.d/${repo_name}.sources"
-    
-    cat > "$sources_file" <<EOF
-Types: deb
-URIs: ${uri}
-Suites: ${suite}
-Components: ${components}
-Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-EOF
-    
-    chmod 644 "$sources_file"
-}
-
-# Disable enterprise repository
-disable_enterprise_repo() {
-    local repo_file="$1"
-    
-    if [ -f "$repo_file" ]; then
-        echo -e "${YELLOW}[-]${NC} Disabling enterprise repository entries in $(basename "$repo_file")"
-        
-        # Check if it's a *.sources format file
-        if [[ "$repo_file" == *.sources ]]; then
-            # For *.sources format, add Enabled: false if not present
-            if ! grep -q "^Enabled: false" "$repo_file"; then
-                echo "Enabled: false" >> "$repo_file"
-                echo -e "${GREEN}[+]${NC} Added 'Enabled: false' to $(basename "$repo_file")"
-            else
-                echo -e "${GREEN}[+]${NC} 'Enabled: false' already present in $(basename "$repo_file")"
-            fi
-        else
-            # For *.list format, comment out deb lines
-            sed -i 's/^[[:space:]]*deb/# &/' "$repo_file"
-            
-            # If file becomes fully commented, consider deletion or renaming
-            if grep -q '^[^#]' "$repo_file" 2>/dev/null; then
-                return 0  # Still has uncommented entries, keep file
-            else
-                echo -e "${YELLOW}[-]${NC} Enterprise repository completely disabled, backing up to ${repo_file}.disabled"
-                mv "$repo_file" "${repo_file}.disabled"
-            fi
-        fi
-    fi
-}
-
 configure_proxmox_repos() {
     local codename
     codename=$(detect_os_codename)
@@ -774,67 +664,39 @@ configure_proxmox_repos() {
         exit 1
     fi
 
-    echo -e "${GREEN}[+]${NC} Detected system codename: ${codename}"
-    
-    # Check if system supports *.sources format
-    local use_sources_format=false
-    if is_trixie_or_newer "$codename"; then
-        use_sources_format=true
-        echo -e "${GREEN}[+]${NC} System supports modern *.sources repository format"
-    else
-        echo -e "${YELLOW}[-]${NC} Using legacy *.list repository format for compatibility"
+    local repo_line="deb http://download.proxmox.com/debian/pve ${codename} pve-no-subscription"
+    echo -e "${GREEN}[+]${NC} Configuring Proxmox no-subscription repository: ${repo_line}"
+    printf '%s\n' "$repo_line" > /etc/apt/sources.list.d/pve-no-subscription.list
+
+    if [ -f /etc/apt/sources.list.d/pve-enterprise.list ]; then
+        echo -e "${YELLOW}[-]${NC} Disabling enterprise repository entries in pve-enterprise.list"
+        sed -i 's/^[[:space:]]*deb/# &/' /etc/apt/sources.list.d/pve-enterprise.list
     fi
 
-    # Handle PVE repository
-    local pve_uri="http://download.proxmox.com/debian/pve"
-    local pve_components="pve-no-subscription"
-    
-    if [ "$use_sources_format" = true ]; then
-        create_sources_repo "pve-no-subscription" "$pve_uri" "$codename" "$pve_components"
-    else
-        local pve_line="deb ${pve_uri} ${codename} ${pve_components}"
-        create_legacy_list_repo "pve-no-subscription" "$pve_line"
+    if [ -f /etc/apt/sources.list.d/ceph.list ]; then
+        echo -e "${YELLOW}[-]${NC} Disabling enterprise Ceph repository entries in ceph.list"
+        sed -i 's/^[[:space:]]*deb/# &/' /etc/apt/sources.list.d/ceph.list
     fi
 
-    # Disable PVE enterprise repository
-    disable_enterprise_repo "/etc/apt/sources.list.d/pve-enterprise.list"
-    disable_enterprise_repo "/etc/apt/sources.list.d/pve-enterprise.sources" 2>/dev/null || true
-
-    # Handle Ceph repository
-    local ceph_uri=""
-    local ceph_components=""
-    
+    local ceph_line=""
     case "$codename" in
         bullseye)
-            ceph_uri="http://download.proxmox.com/debian/ceph-pacific"
-            ceph_components="no-subscription"
+            ceph_line="deb http://download.proxmox.com/debian/ceph-pacific bullseye no-subscription"
             ;;
         bookworm)
-            ceph_uri="http://download.proxmox.com/debian/ceph-quincy"
-            ceph_components="no-subscription"
+            ceph_line="deb http://download.proxmox.com/debian/ceph-quincy bookworm no-subscription"
             ;;
         trixie)
-            ceph_uri="http://download.proxmox.com/debian/ceph-squid"
-            ceph_components="no-subscription"
+            ceph_line="deb http://download.proxmox.com/debian/ceph-squid trixie no-subscription"
             ;;
     esac
 
-    if [ -n "$ceph_uri" ] && [ -n "$ceph_components" ]; then
-        if [ "$use_sources_format" = true ]; then
-            create_sources_repo "ceph-no-subscription" "$ceph_uri" "$codename" "$ceph_components"
-        else
-            local ceph_line="deb ${ceph_uri} ${codename} no-subscription"
-            create_legacy_list_repo "ceph-no-subscription" "$ceph_line"
-        fi
+    if [ -n "$ceph_line" ]; then
+        echo -e "${GREEN}[+]${NC} Configuring Ceph no-subscription repository: ${ceph_line}"
+        printf '%s\n' "$ceph_line" > /etc/apt/sources.list.d/ceph-no-subscription.list
     else
-        echo -e "${YELLOW}[-]${NC} No Ceph repository configuration found for codename ${codename}."
+        echo -e "${YELLOW}[-]${NC} No Ceph no-subscription repository configured for codename ${codename}."
     fi
-
-    # Disable Ceph enterprise repository
-    disable_enterprise_repo "/etc/apt/sources.list.d/ceph.list"
-    disable_enterprise_repo "/etc/apt/sources.list.d/ceph.sources" 2>/dev/null || true
-
-    echo -e "${GREEN}[+]${NC} Repository configuration completed successfully"
 }
 
 ensure_kernel_headers() {
@@ -1404,15 +1266,15 @@ print_installation_summary() {
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  GRID A16-2Q         On   | 00000000:00:1E.0 Off |                  N/A |
-| 30%   35C    P0     40W / 250W|   1024MiB / 16384MiB |      5%      Default |
+|   0  GRID A16-2Q        On   | 00000000:00:1E.0 Off |                  N/A |
+| 30%   35C    P0    40W / 250W|   1024MiB / 16384MiB |      5%      Default |
 |                               |                      |                      |
 +-------------------------------+----------------------+----------------------+
-|   Processes:                                                                |
+| Processes:                                                                  |
 |  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
 |        ID   ID                                                   Usage      |
 |=============================================================================|
-|    0   N/A  N/A      1234      C   qemu-system-x86_64                512MiB |
+|    0   N/A  N/A      1234      C   qemu-system-x86_64                 512MiB |
 +-----------------------------------------------------------------------------+
 EOF
     echo ""
@@ -1580,40 +1442,44 @@ perform_step_two() {
         fi
 
         if [ -z "$URL" ]; then
-            # Check if driver file already exists and validate MD5
             if [ -e "$driver_filename" ]; then
-                if [ -n "$md5" ]; then
-                    current_md5=$(md5sum "$driver_filename" | awk '{print $1}')
-                    if [ "$current_md5" == "$md5" ]; then
-                        echo -e "${GREEN}[+]${NC} Driver file $driver_filename already exists and MD5 checksum matches. Skipping download."
-                    else
-                        echo -e "${YELLOW}[-]${NC} Driver file $driver_filename exists but MD5 checksum does not match."
-                        echo -e "${YELLOW}[-]${NC} Expected MD5: $md5"
-                        echo -e "${YELLOW}[-]${NC} Current MD5: $current_md5"
-                        echo -e "${YELLOW}[-]${NC} Re-downloading the file..."
-                        
-                        # Backup old file and download new one
-                        mv "$driver_filename" "$driver_filename.bak"
-                        echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
-                        
-                        # Download the driver
-                        download_driver_file "$driver_url" "$driver_filename"
-                    fi
-                else
-                    echo -e "${YELLOW}[-]${NC} Driver file $driver_filename exists but no MD5 checksum available for validation."
-                    echo -e "${YELLOW}[-]${NC} Using existing file. If you want to re-download, please remove the file manually."
+                mv "$driver_filename" "$driver_filename.bak"
+                echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
+            fi
+
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+
+            if [[ "$driver_url" == https://mega.nz/* ]]; then
+                if ! command -v megadl >/dev/null 2>&1; then
+                    echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+
+                if ! megadl "$driver_url"; then
+                    echo -e "${RED}[!]${NC} Download failed."
+                    exit 1
                 fi
             else
-                # File does not exist, proceed with download
-                echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-                download_driver_file "$driver_url" "$driver_filename"
+                if command -v curl >/dev/null 2>&1; then
+                    if ! curl -fSL "$driver_url" -o "$driver_filename"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
+                elif command -v wget >/dev/null 2>&1; then
+                    if ! wget -O "$driver_filename" "$driver_url"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
+                else
+                    echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
+                    exit 1
+                fi
             fi
-            
-            # MD5 validation after download (if file was downloaded or needs validation)
-            if [ -n "$md5" ] && [ ! -e "$driver_filename.bak" ] || [ -e "$driver_filename" ]; then
+
+            if [ -n "$md5" ]; then
                 downloaded_md5=$(md5sum "$driver_filename" | awk '{print $1}')
                 if [ "$downloaded_md5" != "$md5" ]; then
-                    echo -e "${RED}[!]${NC} MD5 checksum mismatch. Downloaded file is corrupt."
+                    echo -e "${RED}[!]${NC}  MD5 checksum mismatch. Downloaded file is corrupt."
                     echo ""
                     read -p "$(echo -e "${BLUE}[?]${NC}Do you want to continue? (y/n): ")" choice
                     echo ""
@@ -1624,6 +1490,8 @@ perform_step_two() {
                 else
                     echo -e "${GREEN}[+]${NC} MD5 checksum matched. Downloaded file is valid."
                 fi
+            else
+                echo -e "${YELLOW}[-]${NC} No MD5 checksum available for validation."
             fi
         fi
     fi
@@ -1636,7 +1504,7 @@ perform_step_two() {
         echo -e "${GREEN}[+]${NC} Secure Boot signing parameters will be applied during driver installation."
     fi
 
-    if version_ge "$driver_version" "17.6"; then
+    if version_ge "$driver_version" "18.0"; then
         install_flags="--dkms -s"
     else
         install_flags="--dkms -m=kernel -s"
@@ -1722,11 +1590,8 @@ perform_step_two() {
         # Run the patched driver installer
         chmod +x "$patched_installer"
         run_command "Installing patched driver" "info" "./$patched_installer $install_flags"
-    elif [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Unknown" ]; then
+    elif [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Unknown" ]; then
         # Run the regular driver installer
-		
-		echo "Installing native driver" "info" "./$driver_filename $install_flags"
-		
         run_command "Installing native driver" "info" "./$driver_filename $install_flags"
     else
         echo -e "${RED}[!]${NC} Unknown or unsupported GPU: $VGPU_SUPPORT"
@@ -1766,16 +1631,9 @@ perform_step_two() {
         echo -e "${YELLOW}[-]${NC} Skipping enable for nvidia-vgpu-mgr.service (unit not found)."
     fi
 
-    # Enable SR-IOV capabilites for supported Native vGPU cards if available
-	
-    run_command "Enable SR-IOV" "info" "systemctl enable --now pve-nvidia-sriov@ALL.service"
-    run_command "List vGPU VFs" "info" "lspci -d 10de:"
-	
-
     if [ "${FASTAPI_WARNING}" = "1" ]; then
         echo -e "${YELLOW}[!]${NC} Reminder: Driver branch ${driver_version} requires gridd-unlock patches or nvlts for licensing."
     fi
-
 
     prompt_guest_driver_downloads "$driver_version" "$driver_filename"
 
@@ -1899,7 +1757,7 @@ case $STEP in
                 echo -e "${YELLOW}[-]${NC} This tool prepares headers, DKMS dependencies and kernel settings for vGPU."
                 read -p "$(echo -e "${BLUE}[?]${NC} Run 'pve-nvidia-vgpu-helper setup' now? (y/n): ")" helper_choice
                 if [ "$helper_choice" = "y" ]; then
-                    if run_command "Running pve-nvidia-vgpu-helper setup" "info" "echo y | pve-nvidia-vgpu-helper setup"; then
+                    if run_command "Running pve-nvidia-vgpu-helper setup" "info" "pve-nvidia-vgpu-helper setup"; then
                         set_config_value "VGPU_HELPER_STATUS" "done"
                         VGPU_HELPER_STATUS="done"
                     else
@@ -1940,8 +1798,8 @@ case $STEP in
 
             # APT installing packages
             # Ensure required tooling for kernel builds, downloads, and secure boot signing
-            run_command "Installing packages" "info" "apt install -y git build-essential dkms proxmox-kernel-$(uname -r) proxmox-headers-$(uname -r) mdevctl wget curl megatools jq mokutil"
-			ensure_kernel_headers
+            run_command "Installing packages" "info" "apt install -y git build-essential dkms mdevctl curl wget unzip jq megatools mokutil"
+            ensure_kernel_headers
 
             # Pinning the kernel
             kernel_version_compare() {
@@ -2356,7 +2214,7 @@ case $STEP in
             # Removing previous vgpu_unlock-rs
             if confirm_action "Do you want to remove vgpu_unlock-rs?"; then
                 #echo "removing previous vgpu_unlock-rs"
-                run_command "Removing vgpu_unlock-rs" "notification" "rm -rf /opt/vgpu_unlock-rs"
+                run_command "Removing previous vgpu_unlock-rs" "notification" "rm -rf /opt/vgpu_unlock-rs"
             fi
 
             # Removing vgpu-proxmox
@@ -2399,37 +2257,41 @@ case $STEP in
 
             DRIVER_VERSION="$driver_version"
 
-            # Check if driver file already exists and validate MD5
             if [ -e "$driver_filename" ]; then
-                if [ -n "$md5" ]; then
-                    current_md5=$(md5sum "$driver_filename" | awk '{print $1}')
-                    if [ "$current_md5" == "$md5" ]; then
-                        echo -e "${GREEN}[+]${NC} Driver file $driver_filename already exists and MD5 checksum matches. Skipping download."
-                    else
-                        echo -e "${YELLOW}[-]${NC} Driver file $driver_filename exists but MD5 checksum does not match."
-                        echo -e "${YELLOW}[-]${NC} Expected MD5: $md5"
-                        echo -e "${YELLOW}[-]${NC} Current MD5: $current_md5"
-                        echo -e "${YELLOW}[-]${NC} Re-downloading the file..."
-                        
-                        # Backup old file and download new one
-                        mv "$driver_filename" "$driver_filename.bak"
-                        echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
-                        
-                        # Download the driver
-                        download_driver_file "$driver_url" "$driver_filename"
-                    fi
-                else
-                    echo -e "${YELLOW}[-]${NC} Driver file $driver_filename exists but no MD5 checksum available for validation."
-                    echo -e "${YELLOW}[-]${NC} Using existing file. If you want to re-download, please remove the file manually."
-                fi
-            else
-                # File does not exist, proceed with download
-                echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
-                download_driver_file "$driver_url" "$driver_filename"
+                mv "$driver_filename" "$driver_filename.bak"
+                echo -e "${YELLOW}[-]${NC} Moved $driver_filename to $driver_filename.bak"
             fi
 
-            # MD5 validation after download (if file was downloaded or needs validation)
-            if [ -n "$md5" ] && [ ! -e "$driver_filename.bak" ] || [ -e "$driver_filename" ]; then
+            echo -e "${GREEN}[+]${NC} Downloading vGPU $driver_filename host driver"
+
+            if [[ "$driver_url" == https://mega.nz/* ]]; then
+                if ! command -v megadl >/dev/null 2>&1; then
+                    echo -e "${RED}[!]${NC} megadl is required to download from Mega.nz. Install megatools or provide an alternate URL."
+                    exit 1
+                fi
+
+                if ! megadl "$driver_url"; then
+                    echo -e "${RED}[!]${NC} Download failed."
+                    exit 1
+                fi
+            else
+                if command -v curl >/dev/null 2>&1; then
+                    if ! curl -fSL "$driver_url" -o "$driver_filename"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
+                elif command -v wget >/dev/null 2>&1; then
+                    if ! wget -O "$driver_filename" "$driver_url"; then
+                        echo -e "${RED}[!]${NC} Download failed."
+                        exit 1
+                    fi
+                else
+                    echo -e "${RED}[!]${NC} Neither curl nor wget is available for downloading."
+                    exit 1
+                fi
+            fi
+
+            if [ -n "$md5" ]; then
                 downloaded_md5=$(md5sum "$driver_filename" | awk '{print $1}')
                 if [ "$downloaded_md5" != "$md5" ]; then
                     echo -e "${RED}[!]${NC} MD5 checksum mismatch. Downloaded file is corrupt."
@@ -2443,6 +2305,8 @@ case $STEP in
                 else
                     echo -e "${GREEN}[+]${NC} MD5 checksum matched. Downloaded file is valid."
                 fi
+            else
+                echo -e "${YELLOW}[-]${NC} No MD5 checksum available for validation."
             fi
 
             prompt_guest_driver_downloads "$driver_version" "$driver_filename"
@@ -2472,8 +2336,9 @@ case $STEP in
         *)
             echo ""
             echo "Invalid choice. Please enter 1, 2, 3, 4, 5, 6 or 7."
-            echo ;;
-    esac
+            echo ""
+            ;;
+        esac
     ;;
     2)
         perform_step_two

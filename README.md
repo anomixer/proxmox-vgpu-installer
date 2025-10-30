@@ -9,12 +9,14 @@ For complete documentation on script architecture, features, and usage, visit ht
 ## Features
 
 - **Multi-Version Support**: Comprehensive driver support from v16.x through v19.x series
+- **Smart Driver Downloads**: Intelligent download management with file existence checking and MD5 verification - skips downloads if files already exist and match expected checksums
 - **Dual vGPU Modes**: Support for both native vGPU (Tesla/Quadro) and vgpu_unlock (consumer cards)
 - **Guest Driver Catalog**: Built-in catalog with curated Linux and Windows guest drivers
 - **Automated Licensing**: FastAPI-DLS licensing server deployment with Docker (for v16.x, v17.x)
 - **Multi-GPU Handling**: Automatic detection and configuration for systems with multiple GPUs
 - **Secure Boot Support**: Complete Secure Boot integration with module signing
 - **Proxmox Integration**: Seamless integration with Proxmox VE's PCI passthrough system
+- **Repository Format Support**: Automatic support for both legacy `*.list` and modern `*.sources` repository formats (Proxmox 9/trixie)
 
 ## Installation Requirements
 
@@ -52,11 +54,18 @@ For complete documentation on script architecture, features, and usage, visit ht
 
 ## Version History
 
-Changes in version 1.71 (current release)
+Changes in version 1.72 (current release)
+- This version focuses on stability improvements.
+- Replaced the Host Driver note with supported GPUs for easier configuration.
+- Switched to the new *.sources repository format introduced in Debian 13 / Proxmox VE 9 (Trixie) to prevent duplicate sources that may cause apt update errors.
+- Ensured that nvidia-vgpu-helper automatically installs pve-headers and enables SR-IOV capabilities for native vGPU cards.
+- Added file existence checks and MD5 verification to prevent unnecessary re-downloads of host drivers.
+- ** Note **: Patch files have not been released since driver version 19.1 (580.82.02). Please wait for an updated patch if you plan to use the vgpu_unlock feature.
+
+Changes in version 1.71
 - This version is a minor update with newer driver download URL.
 - Readme file rewritten with more details.
 - Added host and guest drivers v19.2 and v16.3.
-- ** Note**: Currently there has no patch files available since driver version 19.1 (580.82.02). Please wait for the patch release.
 
 Changes in version 1.7 (contributed by [RocketRammer](https://github.com/RocketRammer/proxmox-vgpu-installer))
 - Added a built-in guest driver catalog with curated Linux and Windows packages for every supported vGPU branch and prompts to fetch them automatically after host driver installs or from menu option 5.
@@ -185,6 +194,7 @@ Changes in version 1.1 (original author wvthoog's latest release)
 
 **Option 4: Download vGPU drivers**
 - Downloads drivers without installing them
+- Includes smart download logic with file existence checking and MD5 verification
 - Useful for offline installations or testing
 - Supports multiple driver versions
 
@@ -209,11 +219,32 @@ Changes in version 1.1 (original author wvthoog's latest release)
 - Optional vgpu_unlock-rs compilation
 
 **Step 2 (Driver Installation):**
-- Driver download with MD5 verification
+- Smart driver download with existence checking and MD5 verification
 - Driver installation with appropriate flags
 - System service configuration
 - Guest driver download (optional)
 - Licensing server setup (optional)
+
+### Smart Download Features (v1.73+)
+
+The installer now includes intelligent download management:
+
+**File Existence Checking:**
+- Before downloading, the installer checks if the driver file already exists
+- MD5 checksum verification for existing files
+- Automatic decision-making based on file integrity
+
+**Download Scenarios:**
+- **File exists and MD5 matches**: Skips download with notification
+- **File exists but MD5 mismatches**: Backs up old file and re-downloads
+- **File doesn't exist**: Proceeds with normal download
+
+**User Notifications:**
+```
+[+] Driver file NVIDIA-Linux-x86_64-xxx-vgpu-kvm.run already exists and MD5 checksum matches. Skipping download.
+[-] Driver file exists but MD5 checksum does not match. Re-downloading the file...
+[+] Downloading vGPU NVIDIA-Linux-x86_64-xxx-vgpu-kvm.run host driver
+```
 
 ### Multi-GPU Systems
 
@@ -304,12 +335,14 @@ The `gpu_info.db` SQLite database contains GPU compatibility information for vGP
 - `vgpu`: Support level ("Native", "Yes", "No")
 - `driver`: Supported driver versions (semicolon-separated)
 - `chip`: GPU architecture
+
 ## To-Do
 
 1. Replace FastAPI-DLS with nvlts (https://git.collinwebdesigns.de/vgpu/nvlts) in future releases
 2. Continue adding new GPU data to gpu_info.db as new models are released (RTX 5000 series desktop GPUs completed)
 3. Enhanced automation for guest driver distribution across VM clusters
 4. Integration testing for latest Proxmox VE versions and NVIDIA drivers
+5. Implement download caching for faster subsequent installations
 
 ## Contributing
 
