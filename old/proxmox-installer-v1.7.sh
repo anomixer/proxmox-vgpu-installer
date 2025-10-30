@@ -13,7 +13,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.71
+SCRIPT_VERSION=1.7
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -69,7 +69,6 @@ load_static_guest_driver_catalog() {
         [ -z "$branch" ] && continue
         register_guest_driver "$branch" "$linux_url" "$windows_url"
     done <<'CATALOG'
-19.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.2/NVIDIA-Linux-x86_64-580.95.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.2/581.42_grid_win10_win11_server2019_server2022_server2025_dch_64bit_international.exe
 19.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.1/NVIDIA-Linux-x86_64-580.82.07-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.1/581.15_grid_win10_win11_server2022_dch_64bit_international.exe
 19.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.0/NVIDIA-Linux-x86_64-580.65.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.0/580.88_grid_win10_win11_server2022_dch_64bit_international.exe
 18.4|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.4/NVIDIA-Linux-x86_64-570.172.08-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU18.4/573.48_grid_win10_win11_server2022_dch_64bit_international.exe
@@ -558,7 +557,7 @@ register_driver "19.1" "19.1 (580.82.02)" "NVIDIA-Linux-x86_64-580.82.02-vgpu-kv
 register_driver "19.0" "19.0 (580.65.05)" "NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Host_Drivers/NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" "c75f6465338f0178fcbffe654b5e2086" "" "community mirror"
 register_driver "18.4" "18.4 (570.172.07)" "NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Host_Drivers/NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" "5b370637f2aaf2f1828027aeaabafff9" "" "community mirror"
 register_driver "18.3" "18.3 (570.158.02)" "NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Host_Drivers/NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" "c68a523bb835ea753bab2c1e9055d610" "" "community mirror"
-register_driver "18.2" "18.2 (570.148.06)" "NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.2/NVIDIA-GRID-Linux-KVM-570.148.06-570.148.08-573.07/Host_Drivers/NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "31bbade9f2827490ff86ab777178229d" "" "community mirror"
+register_driver "18.2" "18.2 (570.148.06)" "NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "" "" "" "manual download"
 register_driver "18.1" "18.1 (570.133.10)" "NVIDIA-Linux-x86_64-570.133.10-vgpu-kvm.run" "https://mega.nz/file/0YpHTAxJ#_XMpdJ68w3sM72p87kYSiEQXFA5BbFZl_xvF_XZSd4k" "f435eacdbe3c8002ccad14bd62c9bd2d" "" "mega.nz mirror"
 register_driver "18.0" "18.0 (570.124.03)" "NVIDIA-Linux-x86_64-570.124.03-vgpu-kvm.run" "https://mega.nz/file/RUxgjLRZ#aDy-DWKJXg-rTrisraE2MKrKbl1jbX4-13L0W32fiHQ" "1804b889e27b7f868afb5521d871b095" "" "mega.nz mirror"
 register_driver "17.6" "17.6 (550.163.02)" "NVIDIA-Linux-x86_64-550.163.02-vgpu-kvm.run" "https://mega.nz/file/NAYAGYpL#en-eYfid3GYmHkGVCAUagc6P2rbdw1Y2E9-7hOW19m8" "093036d83baf879a4bb667b484597789" "" "mega.nz mirror"
@@ -572,7 +571,7 @@ register_driver "16.8" "16.8 (535.216.01)" "NVIDIA-Linux-x86_64-535.216.01-vgpu-
 register_driver "16.7" "16.7 (535.183.04)" "NVIDIA-Linux-x86_64-535.183.04-vgpu-kvm.run" "https://mega.nz/file/gIwxGSyJ#xDcaxkymYcNFUTzwZ_m1HWcTgQrMSofJLPYMU-YGLMo" "68961f01a2332b613fe518afd4bfbfb2" "" "mega.nz mirror"
 register_driver "16.5" "16.5 (535.161.05)" "NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" "https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20" "bad6e09aeb58942750479f091bb9c4b6" "" "mega.nz mirror"
 register_driver "16.4" "16.4 (535.161.05)" "NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" "https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20" "bad6e09aeb58942750479f091bb9c4b6" "" "mega.nz mirror"
-register_driver "16.3" "16.3 (535.154.02)" "NVIDIA-Linux-x86_64-535.154.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/16.3/NVIDIA-GRID-Linux-KVM-535.154.02-535.154.05-538.15/Host_Drivers/NVIDIA-Linux-x86_64-535.154.02-vgpu-kvm.run" "a2d70f262e413023e97b2c56347f3544" "" "community mirror"
+register_driver "16.3" "16.3 (535.154.02)" "NVIDIA-Linux-x86_64-535.154.02-vgpu-kvm.run" "" "" "" "manual download"
 register_driver "16.2" "16.2 (535.129.03)" "NVIDIA-Linux-x86_64-535.129.03-vgpu-kvm.run" "https://mega.nz/file/EyEXTbbY#J9FUQL1Mo4ZpNyDijStEH4bWn3AKwnSAgJEZcxUnOiQ" "0048208a62bacd2a7dd12fa736aa5cbb" "" "mega.nz mirror"
 register_driver "16.1" "16.1 (535.104.06)" "NVIDIA-Linux-x86_64-535.104.06-vgpu-kvm.run" "https://mega.nz/file/wy1WVCaZ#Yq2Pz_UOfydHy8nC_X_nloR4NIFC1iZFHqJN0EiAicU" "1020ad5b89fa0570c27786128385ca48" "" "mega.nz mirror"
 register_driver "16.0" "16.0 (535.54.06)" "NVIDIA-Linux-x86_64-535.54.06-vgpu-kvm.run" "https://mega.nz/file/xrNCCAaT#UuUjqRap6urvX4KA1m8-wMTCW5ZwuWKUj6zAB4-NPSo" "b892f75f8522264bc176f5a555acb176" "" "mega.nz mirror"
