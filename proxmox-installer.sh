@@ -1766,8 +1766,8 @@ perform_step_two() {
         echo -e "${YELLOW}[-]${NC} Skipping enable for nvidia-vgpu-mgr.service (unit not found)."
     fi
 
-    # Enable SR-IOV capabilites for supported Native vGPU cards if available
-	
+    # Enable SR-IOV capabilites for supported Native vGPU cards if available (wait for 5 seconds)
+	sleep 5
     run_command "Enable SR-IOV" "info" "systemctl enable --now pve-nvidia-sriov@ALL.service"
     run_command "List vGPU VFs" "info" "lspci -d 10de:"
 	

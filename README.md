@@ -146,7 +146,7 @@ Changes in version 1.1 (original author wvthoog's latest release)
 ## Supported NVIDIA Driver Versions
 
 ### v19.x Series (Native vGPU Only)
-- **19.2**: 580.95.02 (community mirror)
+- **19.2**: 580.95.02 (supports RTX PRO 6000D)
 - **19.1**: 580.82.02 (supports RTX PRO 6000 Blackwell Server Edition)
 - **19.0**: 580.65.05 (recommended for Proxmox 8/9)
 
@@ -389,3 +389,4 @@ For issues and questions:
 - NVIDIA for vGPU technology and driver support
 - Proxmox team for excellent virtualization platform
 - Various community mirrors and driver sources
+
