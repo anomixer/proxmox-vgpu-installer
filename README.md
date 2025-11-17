@@ -5,6 +5,7 @@ A comprehensive Bash script that automates the installation and configuration of
 For detailed installation instructions, see the original author's blogpost at https://wvthoog.nl/proxmox-7-vgpu-v3/
 
 For complete documentation on script architecture, features, and usage, visit https://deepwiki.com/anomixer/proxmox-vgpu-installer
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/anomixer/proxmox-vgpu-installer)
 
 ## Features
 
@@ -389,4 +390,5 @@ For issues and questions:
 - NVIDIA for vGPU technology and driver support
 - Proxmox team for excellent virtualization platform
 - Various community mirrors and driver sources
+
 
