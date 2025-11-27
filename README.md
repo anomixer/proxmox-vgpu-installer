@@ -55,7 +55,10 @@ For complete documentation on script architecture, features, and usage, visit ht
 
 ## Version History
 
-Changes in version 1.72 (current release)
+Changes in version 1.73 (current release)
+- Minor fix on pve-nvidia-vgpu-helper setup run_command
+
+Changes in version 1.72
 - This version focuses on stability improvements.
 - Replaced the Host Driver note with supported GPUs for easier configuration.
 - Switched to the new *.sources repository format introduced in Debian 13 / Proxmox VE 9 (Trixie) to prevent duplicate sources that may cause apt update errors.

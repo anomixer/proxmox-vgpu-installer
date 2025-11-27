@@ -13,7 +13,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.73
+SCRIPT_VERSION=1.72
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -1894,6 +1894,22 @@ case $STEP in
             fi
             echo ""
 
+            if command -v pve-nvidia-vgpu-helper >/dev/null 2>&1 && [ "${VGPU_HELPER_STATUS}" != "done" ]; then
+                echo -e "${GREEN}[+]${NC} Detected pve-nvidia-vgpu-helper."
+                echo -e "${YELLOW}[-]${NC} This tool prepares headers, DKMS dependencies and kernel settings for vGPU."
+                read -p "$(echo -e "${BLUE}[?]${NC} Run 'pve-nvidia-vgpu-helper setup' now? (y/n): ")" helper_choice
+                if [ "$helper_choice" = "y" ]; then
+                    if run_command "Running pve-nvidia-vgpu-helper setup" "info" "echo y | pve-nvidia-vgpu-helper setup"; then
+                        set_config_value "VGPU_HELPER_STATUS" "done"
+                        VGPU_HELPER_STATUS="done"
+                    else
+                        echo -e "${RED}[!]${NC} pve-nvidia-vgpu-helper setup reported an error; review the log and rerun if needed."
+                    fi
+                else
+                    echo -e "${YELLOW}[-]${NC} Skipping helper setup. You can run 'pve-nvidia-vgpu-helper setup' manually later."
+                fi
+            fi
+
             # Commands for new installation
             echo -e "${GREEN}[+]${NC} Preparing APT repositories for Proxmox major version ${RED}$major_version${NC}"
             configure_proxmox_repos
@@ -1933,18 +1949,6 @@ case $STEP in
                 ver2=$2
                 printf '%s\n' "$ver1" "$ver2" | sort -V -r | head -n 1
             }
-
-            if command -v pve-nvidia-vgpu-helper >/dev/null 2>&1 && [ "${VGPU_HELPER_STATUS}" != "done" ]; then
-                echo -e "${GREEN}[+]${NC} Detected pve-nvidia-vgpu-helper."
-                echo -e "${YELLOW}[-]${NC} This tool prepares headers, DKMS dependencies and kernel settings for vGPU."
-                read -p "$(echo -e "${BLUE}[?]${NC} Run 'pve-nvidia-vgpu-helper setup' now? (y/n): ")" helper_choice
-                if [ "$helper_choice" = "y" ]; then
-					echo "Running pve-nvidia-vgpu-helper setup. Answer Yes when asked."
-					pve-nvidia-vgpu-helper setup
-                    set_config_value "VGPU_HELPER_STATUS" "done"
-                    VGPU_HELPER_STATUS="done"
-                fi
-            fi
 
             if [[ "$major_version" -le 8 ]]; then
                 # Get the kernel list and filter for 6.5 kernels

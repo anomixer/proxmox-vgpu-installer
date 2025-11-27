@@ -9,8 +9,9 @@ This repository contains a comprehensive Bash script that automates the installa
 ## Architecture and Core Components
 
 ### Main Scripts
-- `proxmox-installer.sh` - Current installer (v1.72, supports driver 16.x-19.x with smart download and new sources repository support)
-- `old/proxmox-installer-v1.71.sh` - Previous version with driver updates
+- `proxmox-installer.sh` - Current installer (v1.73, supports driver 16.x-19.x with smart download and new sources repository support)
+- `old/proxmox-installer-v1.72.sh` - Previous version with driver updates
+- `old/proxmox-installer-v1.71.sh` - Added host and guest drivers v19.2 and v16.3
 - `old/proxmox-installer-v1.7.sh` - Forker's version with guest driver catalog integration
 - `old/proxmox-installer-v1.61.sh` - add driver 19.2
 - `old/proxmox-installer-v1.6.sh` - Forker's version with new driver matrix and patch mechanism
