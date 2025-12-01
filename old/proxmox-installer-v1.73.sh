@@ -13,7 +13,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.75
+SCRIPT_VERSION=1.73
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -69,7 +69,6 @@ load_static_guest_driver_catalog() {
         [ -z "$branch" ] && continue
         register_guest_driver "$branch" "$linux_url" "$windows_url"
     done <<'CATALOG'
-19.3|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.3/NVIDIA-Linux-x86_64-580.105.08-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.3/581.80_grid_win10_win11_server2022_server2025_dch_64bit_international.exe
 19.2|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.2/NVIDIA-Linux-x86_64-580.95.05-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.2/581.42_grid_win10_win11_server2019_server2022_server2025_dch_64bit_international.exe
 19.1|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.1/NVIDIA-Linux-x86_64-580.82.07-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.1/581.15_grid_win10_win11_server2022_dch_64bit_international.exe
 19.0|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.0/NVIDIA-Linux-x86_64-580.65.06-grid.run|https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU19.0/580.88_grid_win10_win11_server2022_dch_64bit_international.exe
@@ -460,13 +459,6 @@ version_gt() {
     dpkg --compare-versions "$1" gt "$2"
 }
 
-# Function to check if kernel version is 6.17 or higher
-is_kernel_617_or_higher() {
-    local current_kernel
-    current_kernel=$(uname -r | sed 's/-pve.*//')
-    version_ge "$current_kernel" "6.17"
-}
-
 sync_fastapi_flag() {
     if [ -n "${driver_version:-}" ] && version_ge "$driver_version" "18.0"; then
         FASTAPI_WARNING=1
@@ -594,23 +586,22 @@ register_driver() {
 }
 
 # Driver registry (URLs requiring authenticated access are left empty for manual supply)
-register_driver "19.3" "19.3 (580.105.06)" "NVIDIA-Linux-x86_64-580.150.06-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.3/NVIDIA-GRID-Linux-KVM-580.105.06-580.105.08-581.80/Host_Drivers/NVIDIA-Linux-x86_64-580.105.06-vgpu-kvm.run" "2642fd16b3ce643065d5a11a6b860acb" "" "Native GPUs only (Select this for most situations.)"
-register_driver "19.2" "19.2 (580.95.02)" "NVIDIA-Linux-x86_64-580.95.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.2/NVIDIA-GRID-Linux-KVM-580.95.02-580.95.05-581.42/Host_Drivers/NVIDIA-Linux-x86_64-580.95.02-vgpu-kvm.run" "9447d6f2e3c73e5fd84c0368444fa1d8" "" "Native GPUs only (no patch file available)"
-register_driver "19.1" "19.1 (580.82.02)" "NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Host_Drivers/NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run" "fe3ecc481c3332422f33b6fab1d51a36" "" "Native GPUs only (no patch file available)"
+register_driver "19.2" "19.2 (580.95.02)" "NVIDIA-Linux-x86_64-580.95.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.2/NVIDIA-GRID-Linux-KVM-580.95.02-580.95.05-581.42/Host_Drivers/NVIDIA-Linux-x86_64-580.95.02-vgpu-kvm.run" "9447d6f2e3c73e5fd84c0368444fa1d8" "" "Native GPUs only"
+register_driver "19.1" "19.1 (580.82.02)" "NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Host_Drivers/NVIDIA-Linux-x86_64-580.82.02-vgpu-kvm.run" "fe3ecc481c3332422f33b6fab1d51a36" "" "Native GPUs only"
 register_driver "19.0" "19.0 (580.65.05)" "NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Host_Drivers/NVIDIA-Linux-x86_64-580.65.05-vgpu-kvm.run" "c75f6465338f0178fcbffe654b5e2086" "" "Native GPUs only"
 register_driver "18.4" "18.4 (570.172.07)" "NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Host_Drivers/NVIDIA-Linux-x86_64-570.172.07-vgpu-kvm.run" "5b370637f2aaf2f1828027aeaabafff9" "" "Native GPUs only"
 register_driver "18.3" "18.3 (570.158.02)" "NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Host_Drivers/NVIDIA-Linux-x86_64-570.158.02-vgpu-kvm.run" "c68a523bb835ea753bab2c1e9055d610" "" "Native GPUs only"
 register_driver "18.2" "18.2 (570.148.06)" "NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "https://alist.homelabproject.cc/d/foxipan/vGPU/18.2/NVIDIA-GRID-Linux-KVM-570.148.06-570.148.08-573.07/Host_Drivers/NVIDIA-Linux-x86_64-570.148.06-vgpu-kvm.run" "31bbade9f2827490ff86ab777178229d" "" "Native GPUs only"
 register_driver "18.1" "18.1 (570.133.10)" "NVIDIA-Linux-x86_64-570.133.10-vgpu-kvm.run" "https://mega.nz/file/0YpHTAxJ#_XMpdJ68w3sM72p87kYSiEQXFA5BbFZl_xvF_XZSd4k" "f435eacdbe3c8002ccad14bd62c9bd2d" "" "Native GPUs only"
-register_driver "18.0" "18.0 (570.124.03)" "NVIDIA-Linux-x86_64-570.124.03-vgpu-kvm.run" "https://mega.nz/file/RUxgjLRZ#aDy-DWKJXg-rTrisraE2MKrKbl1jbX4-13L0W32fiHQ" "1804b889e27b7f868afb5521d871b095" "" "Native GPUs only"
+register_driver "18.0" "18.0 (570.124.03)" "NVIDIA-Linux-x86_64-570.124.03-vgpu-kvm.run" "https://mega.nz/file/RUxgjLRZ#aDy-DWKJXg-rTrisraE2MKrKbl1jbX4-13L0W32fiHQ" "1804b889e27b7f868afb5521d871b095" "" "Turing GPUs"
 register_driver "17.6" "17.6 (550.163.02)" "NVIDIA-Linux-x86_64-550.163.02-vgpu-kvm.run" "https://mega.nz/file/NAYAGYpL#en-eYfid3GYmHkGVCAUagc6P2rbdw1Y2E9-7hOW19m8" "093036d83baf879a4bb667b484597789" "" "Native GPUs only"
-register_driver "17.5" "17.5 (550.144.02)" "NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run" "https://mega.nz/file/sYQ10b4b#hfGVeRog1pmNyx63N_I-siFENBWZj3w_ZQDsjW4PzW4" "37016ba868a0b4390c38aebbacfba09e" "" "Turing GPUs (Select this for most situations.)"
+register_driver "17.5" "17.5 (550.144.02)" "NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run" "https://mega.nz/file/sYQ10b4b#hfGVeRog1pmNyx63N_I-siFENBWZj3w_ZQDsjW4PzW4" "37016ba868a0b4390c38aebbacfba09e" "" "Turing GPUs"
 register_driver "17.4" "17.4 (550.127.06)" "NVIDIA-Linux-x86_64-550.127.06-vgpu-kvm.run" "https://mega.nz/file/VJIVTBiB#nFOU3zkoWyk4Dq1eW-y2dWUQ-YuvxVh_PYXT3bzdfYE" "400b1b2841908ea36fd8f7fdbec18401" "" "Turing GPUs"
 register_driver "17.3" "17.3 (550.90.05)" "NVIDIA-Linux-x86_64-550.90.05-vgpu-kvm.run" "https://mega.nz/file/1dYWAaDJ#9lGnw1CccnIcH7n7UAZ5nfGt3yUXcen72nOUiztw-RU" "a3cddad85eee74dc15dbadcbe30dcf3a" "" "Turing GPUs"
 register_driver "17.1" "17.1 (550.54.16)" "NVIDIA-Linux-x86_64-550.54.16-vgpu-kvm.run" "https://mega.nz/file/sAYwDS7S#eyIeE_GYk_A0hwhayj3nOpcybLV_KAokJwXifDMQtPQ" "4d78514599c16302a0111d355dbf11e3" "" "Turing GPUs"
 register_driver "17.0" "17.0 (550.54.10)" "NVIDIA-Linux-x86_64-550.54.10-vgpu-kvm.run" "https://mega.nz/file/JjtyXRiC#cTIIvOIxu8vf-RdhaJMGZAwSgYmqcVEKNNnRRJTwDFI" "5f5e312cbd5bb64946e2a1328a98c08d" "" "Turing GPUs"
-register_driver "16.9" "16.9 (535.230.02)" "NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run" "https://mega.nz/file/JFYDETBa#IqaXaoqrPAmSZSjbAXCWvHtiUxU0n9O7RJF8Xu5HXIo" "3f6412723880aa5720b44cf0a9a13009" "" "Pascal or older GPUs (Select this for most situations.)"
-register_driver "16.8" "16.8 (535.216.01)" "NVIDIA-Linux-x86_64-535.216.01-vgpu-kvm.run" "https://mega.nz/file/gJBGSZxK#cqyK3KCsfB0mYL8QCsV6P5C9ABmUcV7bQgE9DQ4_8O4" "18627628e749f893cd2c3635452006a4" "" "Pascal or older GPUs"
+register_driver "16.9" "16.9 (535.230.02)" "NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run" "https://mega.nz/file/JFYDETBa#IqaXaoqrPAmSZSjbAXCWvHtiUxU0n9O7RJF8Xu5HXIo" "3f6412723880aa5720b44cf0a9a13009" "" "Pascal or older GPUs"
+register_driver "16.8" "16.8 (535.216.01)" "NVIDIA-Linux-x86_64-535.216.01-vgpu-kvm.run" "https://mega.nz/file/gJBGSZxK#cqyK3KCsfB0mYL8QCsV6P5C9ABmUcV7bQgE9DQ4_8O4" "18627628e749f893cd2c3635452006a46" "" "Pascal or older GPUs"
 register_driver "16.7" "16.7 (535.183.04)" "NVIDIA-Linux-x86_64-535.183.04-vgpu-kvm.run" "https://mega.nz/file/gIwxGSyJ#xDcaxkymYcNFUTzwZ_m1HWcTgQrMSofJLPYMU-YGLMo" "68961f01a2332b613fe518afd4bfbfb2" "" "Pascal or older GPUs"
 register_driver "16.5" "16.5 (535.161.05)" "NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" "https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20" "bad6e09aeb58942750479f091bb9c4b6" "" "Pascal or older GPUs"
 register_driver "16.4" "16.4 (535.161.05)" "NVIDIA-Linux-x86_64-535.161.05-vgpu-kvm.run" "https://mega.nz/file/RvsyyBaB#7fe_caaJkBHYC6rgFKtiZdZKkAvp7GNjCSa8ufzkG20" "bad6e09aeb58942750479f091bb9c4b6" "" "Pascal or older GPUs"
@@ -1404,6 +1395,27 @@ print_installation_summary() {
         echo -e "${YELLOW}[-]${NC} nvidia-smi command not found. Ensure the NVIDIA driver is installed and in your PATH."
     fi
     echo ""
+    echo -e "${GREEN}Reference nvidia-smi output (successful example):${NC}"
+    cat <<'EOF'
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 550.144.02    Driver Version: 550.144.02    CUDA Version: 12.3   |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  GRID A16-2Q         On   | 00000000:00:1E.0 Off |                  N/A |
+| 30%   35C    P0     40W / 250W|   1024MiB / 16384MiB |      5%      Default |
+|                               |                      |                      |
++-------------------------------+----------------------+----------------------+
+|   Processes:                                                                |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|    0   N/A  N/A      1234      C   qemu-system-x86_64                512MiB |
++-----------------------------------------------------------------------------+
+EOF
+    echo ""
     echo -e "${GREEN}Installation tasks complete.${NC}"
     echo ""
 }
@@ -1756,11 +1768,9 @@ perform_step_two() {
 
     # Enable SR-IOV capabilites for supported Native vGPU cards if available (wait for 5 seconds)
 	sleep 5
-
-    if [ "$VGPU_SUPPORT" = "Native" ]; then
-      run_command "Enable SR-IOV" "info" "systemctl enable --now pve-nvidia-sriov@ALL.service"
-      run_command "List vGPU VFs" "info" "lspci -d 10de:"
-	fi
+    run_command "Enable SR-IOV" "info" "systemctl enable --now pve-nvidia-sriov@ALL.service"
+    run_command "List vGPU VFs" "info" "lspci -d 10de:"
+	
 
     if [ "${FASTAPI_WARNING}" = "1" ]; then
         echo -e "${YELLOW}[!]${NC} Reminder: Driver branch ${driver_version} requires gridd-unlock patches or nvlts for licensing."
@@ -1929,7 +1939,7 @@ case $STEP in
                 echo -e "${YELLOW}[-]${NC} This tool prepares headers, DKMS dependencies and kernel settings for vGPU."
                 read -p "$(echo -e "${BLUE}[?]${NC} Run 'pve-nvidia-vgpu-helper setup' now? (y/n): ")" helper_choice
                 if [ "$helper_choice" = "y" ]; then
-					echo "Running pve-nvidia-vgpu-helper setup. NOTE: ANSWER YES WHEN ASKED!"
+					echo "Running pve-nvidia-vgpu-helper setup. Answer Yes when asked."
 					pve-nvidia-vgpu-helper setup
                     set_config_value "VGPU_HELPER_STATUS" "done"
                     VGPU_HELPER_STATUS="done"
@@ -2253,23 +2263,6 @@ case $STEP in
                     # Systemctl
                     run_command "Systemctl daemon-reload" "info" "systemctl daemon-reload"
                     echo -e "${YELLOW}[-]${NC} NVIDIA services will be enabled after the driver installation completes."
-
-                    # Check if kernel is 6.17 or higher and downgrade to 6.14 for vGPU patch compatibility
-                    if is_kernel_617_or_higher; then
-                        echo -e "${YELLOW}[-]${NC} Current kernel $(uname -r) is 6.17 or higher. Downgrading to 6.14.11-4-pve for vGPU patch compatibility."
-
-                        # Install older kernel and headers
-                        run_command "Installing proxmox-kernel-6.14.11-4-pve" "info" "apt install -y proxmox-kernel-6.14.11-4-pve"
-                        run_command "Installing proxmox-headers-6.14.11-4-pve" "info" "apt install -y proxmox-headers-6.14.11-4-pve"
-                        run_command "Installing proxmox-headers-6.14" "info" "apt install -y proxmox-headers-6.14"
-
-                        # Pin the 6.14.11-4-pve kernel
-                        run_command "Pinning kernel 6.14.11-4-pve" "info" "proxmox-boot-tool kernel pin 6.14.11-4-pve"
-
-                        echo -e "${GREEN}[+]${NC} Kernel downgraded to 6.14.11-4-pve and pinned. A reboot is required."
-                        set_config_value "KERNEL_DOWNGRADED" "1"
-                    fi
-
                     update_grub
 
                 elif [ "$VGPU_SUPPORT" = "Native" ]; then
@@ -2278,9 +2271,10 @@ case $STEP in
                 fi
             # Removing previous installations of vgpu
             elif [ "$choice" -eq 2 ]; then
+                #echo "removing nvidia driver"
                 # Removing previous Nvidia driver
                 run_command "Removing previous Nvidia driver" "notification" "nvidia-uninstall -s"
-				# Removing previous vgpu_unlock-rs
+                # Removing previous vgpu_unlock-rs
                 run_command "Removing previous vgpu_unlock-rs" "notification" "rm -rf /opt/vgpu_unlock-rs/ 2>/dev/null"
                 # Removing vgpu-proxmox
                 run_command "Removing vgpu-proxmox" "notification" "rm -rf $VGPU_DIR/vgpu-promox 2>/dev/null"
@@ -2314,11 +2308,6 @@ case $STEP in
             echo ""
             echo "Step 1 completed. Reboot your machine to resume the installation."
             echo ""
-            if [ "${KERNEL_DOWNGRADED:-0}" = "1" ]; then
-                echo -e "${YELLOW}[!]${NC} Kernel has been downgraded to 6.14.11-4-pve for vGPU patch compatibility."
-                echo -e "${YELLOW}[!]${NC} Please reboot now to boot into the downgraded kernel."
-                echo ""
-            fi
             echo "After reboot, run the script again to install the Nvidia driver."
             echo ""
 

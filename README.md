@@ -55,7 +55,16 @@ For complete documentation on script architecture, features, and usage, visit ht
 
 ## Version History
 
-Changes in version 1.73 (current release)
+Changes in version 1.75 (current release)
+- **Kernel Compatibility Management**: Automatic kernel downgrade for vGPU unlock compatibility
+  - Detects when running Proxmox VE 9.1.1+ with kernel 6.17 or higher
+  - Automatically downgrades and pin to kernel 6.14.11-4-pve for vGPU patch compatibility
+  - Only applies to vgpu_unlock scenarios (VGPU_SUPPORT="Yes")
+- **Driver Updates**: Added vGPU 19.3 driver support (580.105.06)
+- **Bug Fixes**: Corrected v16.8 driver MD5 checksum and various driver mapping corrections
+- **Enhanced User Experience**: Improved messaging and notifications for kernel management
+
+Changes in version 1.73 (previous release)
 - Minor fix on pve-nvidia-vgpu-helper setup run_command
 
 Changes in version 1.72
@@ -150,6 +159,7 @@ Changes in version 1.1 (original author wvthoog's latest release)
 ## Supported NVIDIA Driver Versions
 
 ### v19.x Series (Native vGPU Only)
+- **19.3**: 580.105.06 (latest release)
 - **19.2**: 580.95.02 (supports RTX PRO 6000D)
 - **19.1**: 580.82.02 (supports RTX PRO 6000 Blackwell Server Edition)
 - **19.0**: 580.65.05 (recommended for Proxmox 8/9)
@@ -220,6 +230,7 @@ Changes in version 1.1 (original author wvthoog's latest release)
 - Package installation (build tools, headers, etc.)
 - IOMMU configuration for Intel/AMD platforms
 - Kernel module setup and secure boot preparation
+- **Kernel compatibility management** (v1.75+): Automatic kernel downgrade for vGPU unlock on Proxmox VE 9.1.1+
 - Optional vgpu_unlock-rs compilation
 
 **Step 2 (Driver Installation):**
@@ -249,6 +260,26 @@ The installer now includes intelligent download management:
 [-] Driver file exists but MD5 checksum does not match. Re-downloading the file...
 [+] Downloading vGPU NVIDIA-Linux-x86_64-xxx-vgpu-kvm.run host driver
 ```
+
+### Kernel Compatibility Management (v1.75+)
+
+Starting from v1.75, the installer includes automatic kernel compatibility management for vGPU unlock scenarios:
+
+**Automatic Kernel Downgrade:**
+- Detects when running Proxmox VE 9.1.1+ with kernel 6.17 or higher
+- Automatically installs and pins kernel 6.14.11-4-pve for vGPU patch compatibility
+- Only applies to vgpu_unlock scenarios (VGPU_SUPPORT="Yes")
+
+**Why Kernel Downgrade is Needed:**
+- NVIDIA vGPU patches require specific kernel headers (os-interface.h and other NVIDIA driver headers)
+- Kernel 6.17+ in Proxmox VE 9.1.1+ may not include compatible headers for vGPU patching
+- Kernel 6.14.11-4-pve (from Proxmox VE 9.0.1) provides the necessary headers for successful patching
+
+**User Experience:**
+- Transparent process - no user intervention required
+- Clear notifications when kernel downgrade occurs
+- Automatic reboot prompt with downgrade explanation
+- Kernel remains pinned for consistent vGPU environment
 
 ### Multi-GPU Systems
 

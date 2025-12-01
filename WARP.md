@@ -9,7 +9,7 @@ This repository contains a comprehensive Bash script that automates the installa
 ## Architecture and Core Components
 
 ### Main Scripts
-- `proxmox-installer.sh` - Current installer (v1.73, supports driver 16.x-19.x with smart download and new sources repository support)
+- `proxmox-installer.sh` - Current installer (v1.75, supports driver 16.x-19.x with smart download, kernel compatibility management, and new sources repository support)
 - `old/proxmox-installer-v1.72.sh` - Previous version with driver updates
 - `old/proxmox-installer-v1.71.sh` - Added host and guest drivers v19.2 and v16.3
 - `old/proxmox-installer-v1.7.sh` - Forker's version with guest driver catalog integration
@@ -232,6 +232,7 @@ Installation state is persisted in `config.txt` allowing:
 
 ### User Experience Improvements (v1.5+)
 - **Smart Download Logic** (v1.72+): File existence checking and MD5 verification with intelligent skipping
+- **Kernel Compatibility Management** (v1.75+): Automatic kernel downgrade for vGPU unlock compatibility on Proxmox VE 9.1.1+
 - **Refined Driver Selection Menu**: Clean, streamlined display with compatibility annotations
 - **Smart Platform Detection**: Automatic Proxmox version detection with driver recommendations
 - **Compatibility Warnings**: Clear notices about FastAPI-DLS requirements for different vGPU versions
@@ -278,9 +279,20 @@ The `gpu_info.db` SQLite database uses the following schema:
 
 ### Recent Updates
 
-#### v1.73 (Current)
+#### v1.75 (Current)
+- **Kernel Compatibility Management**: Automatic kernel downgrade for vGPU unlock compatibility
+  - Detects when running Proxmox VE 9.1.1+ with kernel 6.17 or higher
+  - Automatically downgrades to kernel 6.14.11-4-pve for vGPU patch compatibility
+  - Pins the downgraded kernel to ensure consistent vGPU patching environment
+  - Only applies to vgpu_unlock scenarios (VGPU_SUPPORT="Yes")
+- **Driver Updates**: Added vGPU 19.3 driver support (580.105.06)
+- **Bug Fixes**: Corrected v16.8 driver MD5 checksum and various driver mapping corrections
+- **Enhanced User Experience**: Improved messaging and notifications for kernel management
 
-#### v1.72 (Previous)
+#### v1.73 (Previous)
+- **Minor fix**: pve-nvidia-vgpu-helper setup run_command
+
+#### v1.72
 - **Major Enhancement**: Added support for Debian 13 (trixie) and Proxmox 9's new `*.sources` repository format
 - **Intelligent Format Detection**: Automatically detects system version and chooses between `*.sources` (trixie+) and `*.list` (legacy) formats
 - **Enhanced Enterprise Repository Handling**: Properly handles `Enabled: false` for `*.sources` format and commenting for `*.list` format
