@@ -1,0 +1,32 @@
+# NVIDIA Driver Files
+NVIDIA-Linux-x86_64-*.run
+NVIDIA-Linux-x86_64-*.exe
+*.grid.run
+*-grid.run
+*-vgpu-kvm.run
+
+# Configuration & Logs
+config.txt
+debug.log
+*.log
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Build Artifacts
+*.o
+*.so
+*.a
