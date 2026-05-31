@@ -6,7 +6,7 @@ IFS=$'\n\t'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 CONFIG_FILE="$SCRIPT_DIR/config.txt"
 
-# Load library modules (v1.81+)
+# Load library modules (v1.8+)
 # Week 1 modules
 if [ -f "$SCRIPT_DIR/lib/common.sh" ]; then
     source "$SCRIPT_DIR/lib/common.sh"
@@ -101,7 +101,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.81
+SCRIPT_VERSION=1.8
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -1530,21 +1530,6 @@ perform_step_two() {
             echo -e "${YELLOW}[-]${NC} You must complete step 1 to downgrade/pin the compatible kernel (${target_k}) and reboot before running step 2."
             exit 1
         fi
-        
-        if is_kernel_68_or_higher; then
-            local is_older_than_176=false
-            if [[ "$driver_version" =~ ^16\.[0-9]+$ ]] || [[ "$driver_version" =~ ^17\.[0-5]$ ]]; then
-                is_older_than_176=true
-            fi
-            
-            if [ "$is_older_than_176" = "true" ]; then
-                local target_k; target_k=$(discover_pve8_kernel_version)
-                echo -e "${RED}[!]${NC} Kernel $(uname -r) is too new for the selected driver version $driver_version (requires kernel < 6.8)."
-                echo -e "${YELLOW}[-]${NC} Driver $driver_version has 'enable_apicv' load errors on kernel 6.8+."
-                echo -e "${YELLOW}[-]${NC} You must complete step 1 to downgrade/pin the compatible kernel (${target_k}) and reboot before running step 2."
-                exit 1
-            fi
-        fi
 
         # Add custom to original filename
         custom_filename="${driver_filename%.run}-custom.run"
@@ -1829,7 +1814,7 @@ case $STEP in
             echo -e "${CYAN}[i]${NC} This includes: git, build-essential, dkms, kernel headers, and utilities"
             
             # Install base packages first
-            run_command "Installing base packages" "info" "apt install -y git build-essential dkms mdevctl wget curl megatools jq mokutil unzip pve-nvidia-vgpu-helper sqlite3"
+            run_command "Installing base packages" "info" "apt install -y git build-essential dkms mdevctl wget curl megatools jq mokutil unzip pve-nvidia-vgpu-helper"
             
             # Install kernel and headers with better error handling
             kernel_version=$(uname -r)
@@ -2157,7 +2142,7 @@ case $STEP in
 
                     # vGPU unlock patches target kernel <= 6.16; 6.17+ / 7.x need 6.14 (v1.75 behavior)
                     if is_kernel_617_or_higher; then
-                        target_k=$(discover_target_kernel_version)
+                        local target_k; target_k=$(discover_target_kernel_version)
                         echo -e "${YELLOW}[-]${NC} Current kernel $(uname -r) is 6.17 or higher (includes 7.x)."
                         echo -e "${YELLOW}[-]${NC} vGPU 16.x–19.x unlock builds require kernel 6.14.x for DKMS compilation."
                         
@@ -2173,27 +2158,6 @@ case $STEP in
                             fi
                         else
                             echo -e "${RED}[!]${NC} You chose not to downgrade the kernel. vGPU unlock cannot function on kernel $(uname -r)."
-                            echo -e "${YELLOW}[-]${NC} Exiting."
-                            exit 1
-                        fi
-                    elif is_kernel_68_or_higher; then
-                        target_k=$(discover_pve8_kernel_version)
-                        echo -e "${YELLOW}[-]${NC} Current kernel $(uname -r) is 6.8 or higher."
-                        echo -e "${YELLOW}[-]${NC} vGPU unlock drivers older than 17.6 (like 17.3 or 16.x) are incompatible with kernel 6.8+ due to KVM 'enable_apicv' symbol changes."
-                        echo -e "${YELLOW}[-]${NC} Pascal GPUs (like Quadro P4000) are limited to vGPU 16.x and require kernel 6.5.x."
-                        
-                        echo ""
-                        read -p "$(echo -e "${BLUE}[?]${NC} Do you want to downgrade and pin kernel to ${target_k} now? (y/n): ")" downgrade_choice
-                        echo ""
-                        
-                        if [ "$downgrade_choice" = "y" ] || [ "$downgrade_choice" = "Y" ]; then
-                            echo -e "${GREEN}[+]${NC} Downgrading and pinning..."
-                            if ! downgrade_kernel_to_65; then
-                                echo -e "${RED}[!]${NC} Kernel downgrade failed. Install manually or use a kernel older than 6.8."
-                                exit 1
-                            fi
-                        else
-                            echo -e "${RED}[!]${NC} You chose not to downgrade the kernel. Older vGPU unlock drivers cannot function on kernel $(uname -r)."
                             echo -e "${YELLOW}[-]${NC} Exiting."
                             exit 1
                         fi

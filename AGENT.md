@@ -4,9 +4,9 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 
 ## Quick Context
 
-**Project**: Proxmox vGPU Installer v1.8  
+**Project**: Proxmox vGPU Installer v1.81  
 **Status**: Stable release (main branch)  
-**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support  
+**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, kernel 6.8+ compatibility fixes  
 **Key Files**: `proxmox-installer.sh`, `lib/*.sh`, `driver_patches.json`, `gpu_info.db`
 
 ---
@@ -17,7 +17,7 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 This repository contains a comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. The project handles the complex process of setting up vGPU support including driver installation, patching, licensing, and system configuration with support for both native vGPU and vgpu_unlock capabilities.
 
 ### Main Components
-- **proxmox-installer.sh** - Main installer (v1.8, supports driver 16.x-20.1)
+- **proxmox-installer.sh** - Main installer (v1.81, supports driver 16.x-20.1)
 - **lib/*.sh** - Modular components (repo, kernel, driver, GPU detection, etc.)
 - **config.txt** - Runtime configuration (step, driver version, vGPU support)
 - **gpu_info.db** - SQLite database with GPU compatibility info
@@ -38,7 +38,13 @@ This repository contains a comprehensive Bash script that automates the installa
 
 ---
 
-## v1.8 Features & Improvements
+## v1.8 & v1.81 Features & Improvements
+
+### v1.81 Hotfixes & Compatibility Updates (Latest)
+- **Local Variable Scope Error Fix (Issue #20)**: Removed invalid `local` variable declarations executed outside bash function contexts inside `proxmox-installer.sh`, correcting fatal syntax errors.
+- **SQLite Python 3 Fallback (Issue #19)**: Added a robust `python3` sqlite module fallback inside `lib/gpu-detect.sh` to allow database querying and verification when the target node does not have the `sqlite3` CLI package installed, preventing silent classification failures.
+- **Kernel 6.8+ Incompatibility Guard & PVE 8 Downgrade (Issue #21)**: Integrated checks to recognize that Kernel 6.8+ (Proxmox VE 8.2+) no longer exports the KVM `enable_apicv` symbol, rendering older unpatched driver modules (like 17.3 or 16.x) un-loadable. The script now alerts users and offers an automated kernel downgrade and pinning to `6.5.x` on Proxmox 8.
+- **Strict Menu Filtering for Unsupported 16.x Versions**: Correctly filtered out `16.10`–`16.14` branches from the selection menu for consumer GPUs (vGPU-Unlock), keeping `16.9` as the highest supported version since higher 16.x branches lack community patches. Added a guard to prevent empty patch folder path resolution.
 
 ### 1. Auto-Discovery Host Drivers
 **File**: `lib/host-drivers-auto.sh`  

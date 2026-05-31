@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/secure-boot.sh - Secure Boot management functions
-# Part of proxmox-vgpu-installer v1.81
+# Part of proxmox-vgpu-installer v1.8
 # Handles Secure Boot detection, key generation, and MOK enrollment
 
 # Secure Boot directories and files (from main script)

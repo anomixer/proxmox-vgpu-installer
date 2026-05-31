@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/kernel-manager.sh - Kernel management functions
-# Part of proxmox-vgpu-installer v1.81
+# Part of proxmox-vgpu-installer v1.8
 # Handles kernel version detection, downgrade, and header installation
 
 # Helper: check if Secure Boot is enabled (fallback definition if not loaded)
@@ -26,13 +26,6 @@ is_kernel_617_or_higher() {
     local current_kernel
     current_kernel=$(uname -r | sed 's/-pve.*//')
     version_ge "$current_kernel" "6.17"
-}
-
-# Check if kernel version is 6.8 or higher (including 6.12+, 6.17+, 7.x+)
-is_kernel_68_or_higher() {
-    local current_kernel
-    current_kernel=$(uname -r | sed 's/-pve.*//')
-    version_ge "$current_kernel" "6.8"
 }
 
 # Check if kernel version is incompatible with NVIDIA driver (6.17+, 7.x+)
@@ -84,35 +77,6 @@ discover_target_kernel_version() {
     echo "$default_fallback"
 }
 
-# Discover the latest available 6.5 kernel package in PVE 8 apt cache
-discover_pve8_kernel_version() {
-    local default_fallback="6.5.13-6-pve"
-    local pkg_name
-    
-    if command -v apt-cache >/dev/null 2>&1; then
-        pkg_name=$(apt-cache pkgnames proxmox-kernel-6.5. 2>/dev/null | grep -E '^proxmox-kernel-6.5\.[0-9]+-[0-9]+-pve(-signed)?$' | sort -V | tail -n 1)
-        if [ -n "$pkg_name" ]; then
-            local ver
-            ver=$(echo "$pkg_name" | sed -E 's/proxmox-kernel-(.*-pve)(-signed)?/\1/')
-            if [ -n "$ver" ]; then
-                echo "$ver"
-                return 0
-            fi
-        fi
-        # Fallback to old pve-kernel-6.5 name
-        pkg_name=$(apt-cache pkgnames pve-kernel-6.5. 2>/dev/null | grep -E '^pve-kernel-6.5\.[0-9]+-[0-9]+-pve$' | sort -V | tail -n 1)
-        if [ -n "$pkg_name" ]; then
-            local ver
-            ver=$(echo "$pkg_name" | sed -E 's/pve-kernel-(.*-pve)/\1/')
-            if [ -n "$ver" ]; then
-                echo "$ver"
-                return 0
-            fi
-        fi
-    fi
-    echo "$default_fallback"
-}
-
 # Downgrade kernel to 6.14 for vGPU unlock compatibility (v1.75)
 downgrade_kernel_for_vgpu() {
     local target_kernel
@@ -141,52 +105,6 @@ downgrade_kernel_for_vgpu() {
     
     log_info "Installing proxmox-headers-$target_kernel..."
     run_command "Installing proxmox-headers-$target_kernel" "info" "apt install -y proxmox-headers-$target_kernel"
-    
-    # Pin the kernel to prevent automatic upgrades
-    log_info "Pinning kernel $target_kernel..."
-    run_command "Pinning kernel $target_kernel" "info" "proxmox-boot-tool kernel pin $target_kernel"
-    
-    log_info "Kernel downgraded to $target_kernel and pinned."
-    set_config_value "KERNEL_DOWNGRADED" "1"
-    
-    return 0
-}
-
-# Downgrade kernel to 6.5 for vGPU unlock compatibility on Proxmox 8
-downgrade_kernel_to_65() {
-    local target_kernel
-    target_kernel=$(discover_pve8_kernel_version)
-    
-    log_warn "Current kernel $(uname -r) is 6.8 or higher."
-    log_warn "Downgrading to kernel $target_kernel for older vGPU patch compatibility."
-    echo ""
-    
-    # Check if Secure Boot is enabled and install appropriate kernel variant
-    if secure_boot_enabled; then
-        log_info "Secure Boot detected — attempting to install signed kernel package."
-        if kernel_signed_available "$target_kernel"; then
-            log_info "Signed kernel package found: proxmox-kernel-${target_kernel}-signed"
-            run_command "Installing proxmox-kernel-${target_kernel}-signed" "info" "apt install -y proxmox-kernel-${target_kernel}-signed"
-        else
-            log_warn "No signed kernel package found for $target_kernel."
-            log_warn "Installing unsigned kernel — this may cause boot failure on Secure Boot systems!"
-            run_command "Installing proxmox-kernel-$target_kernel" "info" "apt install -y proxmox-kernel-$target_kernel"
-        fi
-    else
-        log_info "Installing kernel package..."
-        if apt-cache show "proxmox-kernel-$target_kernel" >/dev/null 2>&1; then
-            run_command "Installing proxmox-kernel-$target_kernel" "info" "apt install -y proxmox-kernel-$target_kernel"
-        else
-            run_command "Installing pve-kernel-$target_kernel" "info" "apt install -y pve-kernel-$target_kernel"
-        fi
-    fi
-    
-    log_info "Installing headers for $target_kernel..."
-    if apt-cache show "proxmox-headers-$target_kernel" >/dev/null 2>&1; then
-        run_command "Installing proxmox-headers-$target_kernel" "info" "apt install -y proxmox-headers-$target_kernel"
-    else
-        run_command "Installing pve-headers-$target_kernel" "info" "apt install -y pve-headers-$target_kernel"
-    fi
     
     # Pin the kernel to prevent automatic upgrades
     log_info "Pinning kernel $target_kernel..."

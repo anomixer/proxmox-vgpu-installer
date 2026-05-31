@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/vgpu-unlock.sh - vGPU unlock setup
-# Part of proxmox-vgpu-installer v1.81
+# Part of proxmox-vgpu-installer v1.8
 # Handles vgpu-proxmox and vgpu_unlock-rs setup for consumer GPUs
 
 # Download vgpu-proxmox repository
@@ -218,12 +218,6 @@ show_debug_log_tail() {
 # Ensure vgpu-proxmox exists and contains the requested patch file.
 ensure_vgpu_proxmox_patch() {
     local patch_name="$1"
-    
-    if [ -z "$patch_name" ]; then
-        log_error "No patch mapping found for the selected driver version."
-        return 1
-    fi
-    
     local patch_path="$VGPU_DIR/vgpu-proxmox/$patch_name"
 
     if [ ! -d "$VGPU_DIR/vgpu-proxmox" ] || ! compgen -G "$VGPU_DIR/vgpu-proxmox/"'*.patch' > /dev/null; then

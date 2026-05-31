@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/repo-manager.sh - APT repository management
-# Part of proxmox-vgpu-installer v1.81
+# Part of proxmox-vgpu-installer v1.8
 # Handles Proxmox repository configuration (*.list and *.sources formats)
 
 # Detect OS codename

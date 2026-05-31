@@ -1,4 +1,4 @@
-# Proxmox vGPU Installer v1.8
+# Proxmox vGPU Installer v1.81
 
 A comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. This tool supports multiple GPU types, driver versions, and provides both native vGPU and vgpu_unlock capabilities.
 
@@ -56,7 +56,13 @@ For complete documentation on script architecture, features, and usage, visit ht
 
 ## Version History
 
-Changes in version 1.8 (latest release)
+Changes in version 1.81 (latest release)
+- **Local Variable Error Fix (Issue #20)**: Removed invalid `local` variable declarations outside function contexts inside `proxmox-installer.sh`, preventing fatal syntax errors during run.
+- **SQLite python3 Fallback (Issue #19)**: Implemented an elegant `python3` sqlite module fallback inside `lib/gpu-detect.sh` to allow querying and verifying the database when the `sqlite3` CLI tool is not present, resolving unrecognized GPU status bugs. Proactively added `sqlite3` to Step 1 base packages.
+- **Kernel 6.8+ Incompatibility Guard & PVE 8 Downgrade (Issue #21)**: Integrated detection for kernel versions 6.8 and higher which removed KVM's `enable_apicv` symbol export. If consumer GPU users select drivers older than 17.6 (like 17.3 or 16.x), the installer will alert them and offer an automated kernel downgrade and pinning to `6.5.x` on Proxmox 8.
+- **Empty Patch Directory Verification Fix**: Guarded `ensure_vgpu_proxmox_patch` to cleanly reject empty patch names, and verified that unsupported 16.x versions (`16.10`-`16.14` which lack community patches in `vgpu-proxmox`) are correctly filtered out from consumer GPU menus.
+
+Changes in version 1.8 (previous release)
 - **Auto-Discovery Host Drivers**: Host drivers auto-discovered from alist.homelabproject.cc
   - Crawls vGPU directory for available versions via API
   - Finds Host_Drivers/NVIDIA-Linux-x86_64-*-vgpu-kvm.run files

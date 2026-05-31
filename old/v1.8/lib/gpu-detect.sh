@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/gpu-detect.sh - GPU detection and compatibility checking
-# Part of proxmox-vgpu-installer v1.81
+# Part of proxmox-vgpu-installer v1.8
 # Handles GPU detection, database queries, and vGPU capability assessment
 
 # Query GPU information from database
@@ -12,15 +12,8 @@ query_gpu_info() {
         return 1
     fi
     
-    local query_result=""
-    if command -v sqlite3 >/dev/null 2>&1; then
-        query_result=$(sqlite3 gpu_info.db "SELECT * FROM gpu_info WHERE deviceid='$gpu_device_id';" 2>/dev/null)
-    elif command -v python3 >/dev/null 2>&1; then
-        query_result=$(python3 -c "import sqlite3; conn = sqlite3.connect('gpu_info.db'); cur = conn.cursor(); cur.execute(\"SELECT * FROM gpu_info WHERE deviceid='$gpu_device_id'\"); r = cur.fetchone(); print('|'.join(str(x) if x is not None else '' for x in r) if r else '')" 2>/dev/null)
-    else
-        log_error "Neither 'sqlite3' CLI nor 'python3' with sqlite3 is available to query the database."
-        return 1
-    fi
+    local query_result
+    query_result=$(sqlite3 gpu_info.db "SELECT * FROM gpu_info WHERE deviceid='$gpu_device_id';" 2>/dev/null)
     
     echo "$query_result"
 }
@@ -305,19 +298,10 @@ check_gpu_database() {
         return 1
     fi
     
-    # Verify it's a valid SQLite database using sqlite3 or python3 fallback
-    if command -v sqlite3 >/dev/null 2>&1; then
-        if ! sqlite3 gpu_info.db "SELECT COUNT(*) FROM gpu_info;" >/dev/null 2>&1; then
-            log_error "GPU database is corrupted or invalid"
-            return 1
-        fi
-    elif command -v python3 >/dev/null 2>&1; then
-        if ! python3 -c "import sqlite3; conn = sqlite3.connect('gpu_info.db'); cur = conn.cursor(); cur.execute('SELECT COUNT(*) FROM gpu_info;');" >/dev/null 2>&1; then
-            log_error "GPU database is corrupted or invalid"
-            return 1
-        fi
-    else
-        log_warn "Neither 'sqlite3' nor 'python3' is available to verify the database structure."
+    # Verify it's a valid SQLite database
+    if ! sqlite3 gpu_info.db "SELECT COUNT(*) FROM gpu_info;" >/dev/null 2>&1; then
+        log_error "GPU database is corrupted or invalid"
+        return 1
     fi
     
     log_debug "GPU database verified"

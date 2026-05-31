@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/config.sh - Configuration management
-# Part of proxmox-vgpu-installer v1.81
+# Part of proxmox-vgpu-installer v1.8
 # Wraps config.txt operations for better maintainability
 
 # Configuration file location (from main script)
