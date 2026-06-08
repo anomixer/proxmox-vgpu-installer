@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/kernel-manager.sh - Kernel management functions
-# Part of proxmox-vgpu-installer v1.82
+# Part of proxmox-vgpu-installer v1.81
 # Handles kernel version detection, downgrade, and header installation
 
 # Helper: check if Secure Boot is enabled (fallback definition if not loaded)

@@ -1,4 +1,4 @@
-# Proxmox vGPU Installer v1.81
+# Proxmox vGPU Installer v1.82
 
 A comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. This tool supports multiple GPU types, driver versions, and provides both native vGPU and vgpu_unlock capabilities.
 
@@ -6,6 +6,33 @@ For detailed installation instructions, see the original author's blogpost at ht
 
 For complete documentation on script architecture, features, and usage, visit https://deepwiki.com/anomixer/proxmox-vgpu-installer
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/anomixer/proxmox-vgpu-installer)
+
+> [!IMPORTANT]
+> **Pascal consumer GPUs (GTX 10-series) using `vgpu_unlock` are not supported on Proxmox VE 9+.**
+> These cards depend on vGPU 16.x / NVIDIA 535.x and an unlock patch path that requires kernel 6.5.x or older.
+> If you are using a GTX 1080 / 1070 / 1060 for vGPU unlock, install Proxmox VE 8 and pin the host kernel to 6.5.x.
+> This warning does **not** apply to enterprise Pascal cards such as Tesla P4/P40/P100, which use native vGPU.
+
+## Compatibility Matrix
+
+| GPU Generation | Setup Type | Example Models | Max vGPU Driver | Compatible Host Kernel | Compatible PVE Version | Practical Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Maxwell** (GM20x) | **vGPU Unlock** (GeForce) | GTX 980, GTX 970 | vGPU 16.x (535.x) | **Kernel <= 6.5.x** | **PVE 8.x** (with 6.5 downgrade), PVE 7.x | Stay on PVE 7 or PVE 8 with kernel 6.5.x only. |
+| **Maxwell** (GM20x) | **Native vGPU** (Enterprise) | Tesla M4, M10, M60 | vGPU 16.x (e.g. 16.14) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Can run on newer kernels and newer PVE branches natively. |
+| **Pascal** (GP10x) | **vGPU Unlock** (GeForce) | GTX 1080, GTX 1070, GTX 1060 | vGPU 16.x (535.x) | **Kernel <= 6.5.x** | **PVE 8.x** (with 6.5 downgrade), PVE 7.x | Use PVE 8 with pinned 6.5.x; do not target PVE 9+. |
+| **Pascal** (GP10x) | **Native vGPU** (Enterprise) | Tesla P4, Tesla P40, Tesla P100 | vGPU 16.x (e.g. 16.14) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Compatible with PVE 8 and PVE 9 using native vGPU. |
+| **Turing** (TU10x/TU11x) | **vGPU Unlock** (GeForce) | RTX 2080, GTX 1660, etc. | vGPU 17.6 (550.x) / 18.x / 19.1 | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Supported on PVE 9+ when using newer vGPU branches (17.6+). |
+| **Turing** (TU10x) | **Native vGPU** (Enterprise) | Tesla T4, Quadro RTX 6000 | vGPU 16.x to 20.x | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Compatible on PVE 8 and PVE 9. |
+| **Ampere & Newer** (GA/AD/GB) | **vGPU Unlock** (GeForce) | RTX 3080, RTX 4090, RTX 5090 | **NOT SUPPORTED** | N/A | N/A | Not supported for unlock by this project. |
+| **Ampere & Newer** (GA/AD/GB) | **Native vGPU** (Enterprise) | A10, A16, L4, RTX A6000 | vGPU 16.x to 20.x | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Native vGPU path on current PVE branches. |
+
+### Clear Rule of Thumb
+
+Use the following decision rule before running the installer:
+- **If your GPU is enterprise/native vGPU capable**: Newer PVE versions (PVE 9+) are generally fine within the driver/kernel support.
+- **If your GPU is a consumer Maxwell or Pascal card (needs `vgpu_unlock`)**: Assume you must remain on PVE 8 and pin your host kernel to `6.5.x` (automated by Step 1 of this script). PVE 8 goes EOL on August 31, 2026.
+- **If your GPU is consumer Turing (needs `vgpu_unlock`)**: You can use newer PVE versions (PVE 9+) because newer supported driver branches (vGPU 17.6+) avoid the `enable_apicv` dependency.
+- **If your GPU is consumer Ampere or newer GeForce**: This project explicitly marks unlock as unsupported.
 
 ## Features
 
@@ -56,13 +83,17 @@ For complete documentation on script architecture, features, and usage, visit ht
 
 ## Version History
 
-Changes in version 1.81 (latest release)
+Changes in version 1.82 (latest release)
+- **Proxmox VE 9 + Pascal GPU Compatibility Guard (Issue #23)**: Proxmox VE 9 (running kernel 6.14/7.x) does not support kernel 6.5.x, which is required for driver versions older than 17.6 (like vGPU 16.x). If a user attempts to install vGPU 16.x on Proxmox VE 9, the script now cleanly aborts with a clear warning instead of attempting an impossible kernel downgrade on Proxmox 9. It advises installing Proxmox VE 8 instead.
+- **IOMMU & VM Startup Cleanup Updates (Issue #22, #17)**: Addressed issues with mediated device allocation/cleanup under vGPU Unlock. VM startup failures with `waited 10 seconds for mediated device driver finishing clean up` can be minimized by upgrading to the newer driver 16.14 (NVIDIA 535.246.02+) which resolves cleanup timing issues.
+
+Changes in version 1.81 (previous release)
 - **Local Variable Error Fix (Issue #20)**: Removed invalid `local` variable declarations outside function contexts inside `proxmox-installer.sh`, preventing fatal syntax errors during run.
 - **SQLite python3 Fallback (Issue #19)**: Implemented an elegant `python3` sqlite module fallback inside `lib/gpu-detect.sh` to allow querying and verifying the database when the `sqlite3` CLI tool is not present, resolving unrecognized GPU status bugs. Proactively added `sqlite3` to Step 1 base packages.
 - **Kernel 6.8+ Incompatibility Guard & PVE 8 Downgrade (Issue #21)**: Integrated detection for kernel versions 6.8 and higher which removed KVM's `enable_apicv` symbol export. If consumer GPU users select drivers older than 17.6 (like 17.3 or 16.x), the installer will alert them and offer an automated kernel downgrade and pinning to `6.5.x` on Proxmox 8.
 - **Empty Patch Directory Verification Fix**: Guarded `ensure_vgpu_proxmox_patch` to cleanly reject empty patch names, and verified that unsupported 16.x versions (`16.10`-`16.14` which lack community patches in `vgpu-proxmox`) are correctly filtered out from consumer GPU menus.
 
-Changes in version 1.8 (previous release)
+Changes in version 1.8
 - **Auto-Discovery Host Drivers**: Host drivers auto-discovered from alist.homelabproject.cc
   - Crawls vGPU directory for available versions via API
   - Finds Host_Drivers/NVIDIA-Linux-x86_64-*-vgpu-kvm.run files
@@ -122,7 +153,7 @@ Changes in version 1.75 (previous release)
 - **Bug Fixes**: Corrected v16.8 driver MD5 checksum and various driver mapping corrections
 - **Enhanced User Experience**: Improved messaging and notifications for kernel management
 
-Changes in version 1.73 (previous release)
+Changes in version 1.73
 - Minor fix on pve-nvidia-vgpu-helper setup run_command
 
 Changes in version 1.72

@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/gpu-detect.sh - GPU detection and compatibility checking
-# Part of proxmox-vgpu-installer v1.82
+# Part of proxmox-vgpu-installer v1.81
 # Handles GPU detection, database queries, and vGPU capability assessment
 
 # Query GPU information from database

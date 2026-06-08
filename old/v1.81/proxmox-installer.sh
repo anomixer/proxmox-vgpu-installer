@@ -101,7 +101,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.82
+SCRIPT_VERSION=1.81
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -1538,12 +1538,6 @@ perform_step_two() {
             fi
             
             if [ "$is_older_than_176" = "true" ]; then
-                if [ "${major_version:-8}" -ge 9 ]; then
-                    echo -e "${RED}[!]${NC} Proxmox VE ${major_version:-9} does not support kernel 6.5.x, which is required for driver version $driver_version."
-                    echo -e "${RED}[!]${NC} Pascal or older GPUs are limited to vGPU 16.x and cannot be used on Proxmox VE 9+."
-                    echo -e "${YELLOW}[-]${NC} Please install Proxmox VE 8 if you need to use vGPU unlock with Pascal or older GPUs."
-                    exit 1
-                fi
                 local target_k; target_k=$(discover_pve8_kernel_version)
                 echo -e "${RED}[!]${NC} Kernel $(uname -r) is too new for the selected driver version $driver_version (requires kernel < 6.8)."
                 echo -e "${YELLOW}[-]${NC} Driver $driver_version has 'enable_apicv' load errors on kernel 6.8+."
@@ -2075,11 +2069,8 @@ case $STEP in
 
                 if [[ -n "$query_result" ]]; then
                     description=$(echo "$query_result" | cut -d '|' -f 3)
-                    vgpu=$(echo "$query_result" | cut -d '|' -f 4)
-                    driver=$(echo "$query_result" | cut -d '|' -f 5 | tr ';' ',')
                     echo -e "${GREEN}[*]${NC} You selected GPU: $description with Device ID: $gpu_device_id on PCI bus 0000:$selected_pci_id"
                     DRIVER_VERSION=$driver
-                    VGPU_SUPPORT=$vgpu
                 else
                     echo -e "${RED}[!]${NC} GPU Device ID: $gpu_device_id not found in the database."
                 fi
@@ -2166,12 +2157,6 @@ case $STEP in
 
                     # vGPU unlock patches target kernel <= 6.16; 6.17+ / 7.x need 6.14 (v1.75 behavior)
                     if is_kernel_617_or_higher; then
-                        if [ "${major_version:-8}" -ge 9 ] && [ "$DRIVER_VERSION" = "16" ]; then
-                            echo -e "${RED}[!]${NC} Proxmox VE ${major_version:-9} does not support kernel 6.5.x, which is required for driver vGPU 16.x."
-                            echo -e "${RED}[!]${NC} Pascal or older GPUs are limited to vGPU 16.x and cannot be used on Proxmox VE 9+."
-                            echo -e "${YELLOW}[-]${NC} Please install Proxmox VE 8 if you need to use vGPU unlock with Pascal or older GPUs."
-                            exit 1
-                        fi
                         target_k=$(discover_target_kernel_version)
                         echo -e "${YELLOW}[-]${NC} Current kernel $(uname -r) is 6.17 or higher (includes 7.x)."
                         echo -e "${YELLOW}[-]${NC} vGPU 16.x–19.x unlock builds require kernel 6.14.x for DKMS compilation."
@@ -2192,12 +2177,6 @@ case $STEP in
                             exit 1
                         fi
                     elif is_kernel_68_or_higher; then
-                        if [ "${major_version:-8}" -ge 9 ]; then
-                            echo -e "${RED}[!]${NC} Proxmox VE ${major_version:-9} does not support kernel 6.5.x, which is required for driver $driver_version (vGPU 16.x)."
-                            echo -e "${RED}[!]${NC} Pascal or older GPUs are limited to vGPU 16.x and cannot be used on Proxmox VE 9+."
-                            echo -e "${YELLOW}[-]${NC} Please install Proxmox VE 8 if you need to use vGPU unlock with Pascal or older GPUs."
-                            exit 1
-                        fi
                         target_k=$(discover_pve8_kernel_version)
                         echo -e "${YELLOW}[-]${NC} Current kernel $(uname -r) is 6.8 or higher."
                         echo -e "${YELLOW}[-]${NC} vGPU unlock drivers older than 17.6 (like 17.3 or 16.x) are incompatible with kernel 6.8+ due to KVM 'enable_apicv' symbol changes."
@@ -2265,7 +2244,7 @@ case $STEP in
             echo "Step 1 completed. Reboot your machine to resume the installation."
             echo ""
             if [ "${KERNEL_DOWNGRADED:-0}" = "1" ]; then
-                target_k=$(discover_target_kernel_version)
+                local target_k; target_k=$(discover_target_kernel_version)
                 echo -e "${YELLOW}[!]${NC} Kernel has been downgraded to ${target_k} for vGPU patch compatibility."
                 echo -e "${YELLOW}[!]${NC} Please reboot now to boot into the downgraded kernel."
                 echo ""

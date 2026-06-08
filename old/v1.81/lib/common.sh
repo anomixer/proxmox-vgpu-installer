@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/common.sh - Common functions and utilities
-# Part of proxmox-vgpu-installer v1.82
+# Part of proxmox-vgpu-installer v1.81
 # Extracted from main script for better maintainability
 
 # Color codes (extracted from main script)

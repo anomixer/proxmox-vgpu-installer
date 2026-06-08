@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/vgpu-unlock.sh - vGPU unlock setup
-# Part of proxmox-vgpu-installer v1.82
+# Part of proxmox-vgpu-installer v1.81
 # Handles vgpu-proxmox and vgpu_unlock-rs setup for consumer GPUs
 
 # Download vgpu-proxmox repository

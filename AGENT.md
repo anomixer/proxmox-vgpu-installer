@@ -4,9 +4,9 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 
 ## Quick Context
 
-**Project**: Proxmox vGPU Installer v1.81  
+**Project**: Proxmox vGPU Installer v1.82  
 **Status**: Stable release (main branch)  
-**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, kernel 6.8+ compatibility fixes  
+**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, kernel 6.8+ compatibility fixes, Proxmox 9 + Pascal guards  
 **Key Files**: `proxmox-installer.sh`, `lib/*.sh`, `driver_patches.json`, `gpu_info.db`
 
 ---
@@ -17,7 +17,7 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 This repository contains a comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. The project handles the complex process of setting up vGPU support including driver installation, patching, licensing, and system configuration with support for both native vGPU and vgpu_unlock capabilities.
 
 ### Main Components
-- **proxmox-installer.sh** - Main installer (v1.81, supports driver 16.x-20.1)
+- **proxmox-installer.sh** - Main installer (v1.82, supports driver 16.x-20.1)
 - **lib/*.sh** - Modular components (repo, kernel, driver, GPU detection, etc.)
 - **config.txt** - Runtime configuration (step, driver version, vGPU support)
 - **gpu_info.db** - SQLite database with GPU compatibility info
@@ -38,9 +38,18 @@ This repository contains a comprehensive Bash script that automates the installa
 
 ---
 
-## v1.8 & v1.81 Features & Improvements
+## v1.8 & v1.81 & v1.82 Features & Improvements
 
-### v1.81 Hotfixes & Compatibility Updates (Latest)
+### v1.82 Hotfixes & Compatibility Updates (Latest)
+- **Proxmox VE 9 + Pascal GPU Compatibility Guard (Issue #23)**: Proxmox VE 9 (running kernel 6.14/7.x) does not support kernel 6.5.x, which is required for driver versions older than 17.6 (like vGPU 16.x). If a user attempts to install vGPU 16.x on Proxmox VE 9, the script now cleanly aborts with a clear message instead of attempting an impossible kernel downgrade on Proxmox 9. It advises installing Proxmox VE 8 instead. Note: This check only applies to consumer/GeForce cards using vGPU Unlock (`VGPU_SUPPORT="Yes"`). Native enterprise Pascal cards (Tesla P4/P40/P100, `VGPU_SUPPORT="Native"`) are fully compatible with PVE 9 using native vGPU 16.x (e.g. 16.14) without unlock.
+  * **Why Pascal vGPU Unlock requires Kernel <= 6.5.x**:
+    1. **NVIDIA Driver Lock-in**: NVIDIA dropped Pascal architecture support starting with vGPU 17.0. Thus, Pascal consumer cards are restricted to vGPU 16.x (NVIDIA 535.x).
+    2. **KVM `enable_apicv` Dependency**: The community `vgpu_unlock` patch relies on the KVM module exporting the `enable_apicv` symbol to bypass NVIDIA's GeForce virtualization block. Linux Kernel 6.8+ (shipped in PVE 8.2+ and 9.x) stopped exporting this symbol, causing patched modules to fail to load at runtime with `Unknown symbol enable_apicv` errors.
+    3. **Compilation Failures**: The 535.x driver codebase is built for older kernels; attempting compilation on newer kernels (like 6.8+ or 6.14+) fails due to significant Linux kernel API changes.
+    4. **Conclusion**: PVE 8 running a pinned kernel 6.5.x is the only viable configuration for Pascal vGPU Unlock. Pinning to 6.14+ is impossible.
+- **IOMMU & VM Startup Cleanup Documentation (Issue #22, #17)**: Addressed issues with mediated device allocation/cleanup under vGPU Unlock by updating documentation. VM startup failures with `waited 10 seconds for mediated device driver finishing clean up` can be minimized by upgrading to the newer driver 16.14 (NVIDIA 535.246.02+) which resolves cleanup timing issues.
+
+### v1.81 Hotfixes & Compatibility Updates
 - **Local Variable Scope Error Fix (Issue #20)**: Removed invalid `local` variable declarations executed outside bash function contexts inside `proxmox-installer.sh`, correcting fatal syntax errors.
 - **SQLite Python 3 Fallback (Issue #19)**: Added a robust `python3` sqlite module fallback inside `lib/gpu-detect.sh` to allow database querying and verification when the target node does not have the `sqlite3` CLI package installed, preventing silent classification failures.
 - **Kernel 6.8+ Incompatibility Guard & PVE 8 Downgrade (Issue #21)**: Integrated checks to recognize that Kernel 6.8+ (Proxmox VE 8.2+) no longer exports the KVM `enable_apicv` symbol, rendering older unpatched driver modules (like 17.3 or 16.x) un-loadable. The script now alerts users and offers an automated kernel downgrade and pinning to `6.5.x` on Proxmox 8.
