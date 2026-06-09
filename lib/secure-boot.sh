@@ -210,7 +210,7 @@ ensure_mokutil() {
     fi
     
     log_info "Installing mokutil..."
-    run_command "Installing mokutil" "info" "apt install -y mokutil"
+    run_command "Installing mokutil" "info" "apt-get install -y mokutil"
 }
 
 # Verify Secure Boot certificate

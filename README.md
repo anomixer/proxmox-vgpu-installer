@@ -21,7 +21,7 @@ For complete documentation on script architecture, features, and usage, visit ht
 | **Maxwell** (GM20x) | **Native vGPU** (Enterprise) | Tesla M4, M10, M60 | vGPU 16.x (e.g. 16.14) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Can run on newer kernels and newer PVE branches natively. |
 | **Pascal** (GP10x) | **vGPU Unlock** (GeForce) | GTX 1080, GTX 1070, GTX 1060 | vGPU 16.x (535.x) | **Kernel <= 6.5.x** | **PVE 8.x** (with 6.5 downgrade), PVE 7.x | Use PVE 8 with pinned 6.5.x; do not target PVE 9+. |
 | **Pascal** (GP10x) | **Native vGPU** (Enterprise) | Tesla P4, Tesla P40, Tesla P100 | vGPU 16.x (e.g. 16.14) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Compatible with PVE 8 and PVE 9 using native vGPU. |
-| **Turing** (TU10x/TU11x) | **vGPU Unlock** (GeForce) | RTX 2080, GTX 1660, etc. | vGPU 17.6 (550.x) / 18.x / 19.1 | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Supported on PVE 9+ when using newer vGPU branches (17.6+). |
+| **Turing** (TU10x/TU11x) | **vGPU Unlock** (GeForce) | RTX 2080, GTX 1660, etc. | vGPU 16.x (535.x), vGPU 17.6 (550.x) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Supported on PVE 9+ when using newer vGPU branches (17.6+). |
 | **Turing** (TU10x) | **Native vGPU** (Enterprise) | Tesla T4, Quadro RTX 6000 | vGPU 16.x to 20.x | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Compatible on PVE 8 and PVE 9. |
 | **Ampere & Newer** (GA/AD/GB) | **vGPU Unlock** (GeForce) | RTX 3080, RTX 4090, RTX 5090 | **NOT SUPPORTED** | N/A | N/A | Not supported for unlock by this project. |
 | **Ampere & Newer** (GA/AD/GB) | **Native vGPU** (Enterprise) | A10, A16, L4, RTX A6000 | vGPU 16.x to 20.x | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Native vGPU path on current PVE branches. |
@@ -85,6 +85,10 @@ Use the following decision rule before running the installer:
 
 Changes in version 1.82 (latest release)
 - **Proxmox VE 9 + Pascal GPU Compatibility Guard (Issue #23)**: Proxmox VE 9 (running kernel 6.14/7.x) does not support kernel 6.5.x, which is required for driver versions older than 17.6 (like vGPU 16.x). If a user attempts to install vGPU 16.x on Proxmox VE 9, the script now cleanly aborts with a clear warning instead of attempting an impossible kernel downgrade on Proxmox 9. It advises installing Proxmox VE 8 instead.
+- **Turing GPU Kernel Downgrade Check Fix**: Refined kernel checking in Step 1 to bypass false kernel downgrade prompts for Turing and newer GeForce GPUs on newer PVE kernels (up to 6.16), correctly enabling them to run vGPU 17.6+ unlock builds on modern systems.
+- **Docker-CE Installation & Conflict Fix**: Resolved package conflicts on Debian 13/Proxmox VE 9 where the official `docker-compose-plugin` clashed with pre-installed legacy `docker-compose` files. Implemented a robust `dpkg -s` check to purge conflicting packages individually.
+- **Enhanced Installer Diagnostics**: Split monolithic Docker installations into 7 discrete `run_command` steps for precise error tracing. Improved `run_command` logging to capture all verbose `stdout` configuration output into `debug.log`, and added defensive database configurations (`dpkg --configure -a`) at the start to immediately surface DKMS build crashes.
+- **Script Cleanliness**: Replaced unstable `apt` CLI commands with stable `apt-get` equivalents throughout all scripts to eliminate verbose shell warnings, and fixed invalid bare `local` variable declarations.
 - **IOMMU & VM Startup Cleanup Updates (Issue #22, #17)**: Addressed issues with mediated device allocation/cleanup under vGPU Unlock. VM startup failures with `waited 10 seconds for mediated device driver finishing clean up` can be minimized by upgrading to the newer driver 16.14 (NVIDIA 535.246.02+) which resolves cleanup timing issues.
 
 Changes in version 1.81 (previous release)

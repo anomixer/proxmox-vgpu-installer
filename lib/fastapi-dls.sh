@@ -25,15 +25,68 @@ detect_primary_ip() {
 # Install Docker and Docker Compose
 install_docker() {
     log_info "Installing Docker-CE"
+    local docker_codename
+    docker_codename=$(detect_os_codename)
+    [ -z "$docker_codename" ] && docker_codename="bookworm"
     
-    run_command "Installing Docker-CE" "info" "apt remove -y docker.io docker-compose docker-compose-v2 podman-docker || true; \
-        apt install ca-certificates curl -y; \
-        curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc; \
-        chmod a+r /etc/apt/keyrings/docker.asc; \
-        echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \$(. /etc/os-release && echo \$VERSION_CODENAME) stable\" | \
-        tee /etc/apt/sources.list.d/docker.list > /dev/null; \
-        apt update; \
-        apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y"
+    # Clear the debug log to avoid showing stale errors from previous attempts
+    if [ -n "${LOG_FILE:-}" ] && [ -f "$LOG_FILE" ]; then
+        > "$LOG_FILE"
+    fi
+
+    log_info "Verifying package manager database..."
+    # Force run dpkg --configure -a to configure any pending packages.
+    # If this fails, it means the package database is locked or broken (usually due to Nvidia DKMS compilation failure).
+    if ! dpkg --configure -a; then
+        echo ""
+        log_error "dpkg database is in an inconsistent state (dpkg --configure -a failed)."
+        log_warn "This usually indicates your NVIDIA driver DKMS compilation failed on the current kernel."
+        log_warn "Please check /var/log/nvidia-installer.log or search for nvidia under /var/lib/dkms/ for errors."
+        log_warn "You must resolve the Nvidia driver compilation issue before you can install Docker-CE."
+        echo ""
+        return 1
+    fi
+
+    # Also resolve any pending broken dependencies
+    if ! apt-get install -f -y; then
+        echo ""
+        log_error "Failed to resolve broken package dependencies (apt-get install -f failed)."
+        echo ""
+        return 1
+    fi
+    
+    # 1. Remove conflicting packages one by one safely
+    for pkg in docker.io docker-compose docker-compose-v2 podman-docker; do
+        if dpkg -s "$pkg" >/dev/null 2>&1; then
+            run_command "Purging conflicting package $pkg" "info" "apt-get purge -y $pkg" || true
+        fi
+    done
+    
+    # 2. Install basic dependencies
+    run_command "Installing dependencies (ca-certificates, curl)" "info" "apt-get install -y ca-certificates curl" || return 1
+    
+    # 3. Create keyring directory
+    run_command "Creating keyring directory" "info" "mkdir -p /etc/apt/keyrings" || return 1
+    
+    # 4. Download GPG key and set permissions
+    run_command "Downloading Docker GPG key" "info" "curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && chmod a+r /etc/apt/keyrings/docker.asc" || return 1
+    
+    # 5. Set up Docker APT repository
+    run_command "Configuring Docker repository" "info" "echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $docker_codename stable\" | tee /etc/apt/sources.list.d/docker.list > /dev/null" || return 1
+    
+    # 6. Update repository list
+    run_command "Updating package lists" "info" "apt-get update" || return 1
+    
+    # 7. Install Docker-CE
+    if ! run_command "Installing Docker-CE and plugins" "info" "apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"; then
+        echo ""
+        log_error "Docker-CE installation failed at the final package installation step."
+        log_warn "This usually happens on Proxmox if you are running inside a nested LXC container"
+        log_warn "without nesting/keyctl features enabled, or if the docker daemon failed to start."
+        log_warn "Please check 'systemctl status docker' and 'journalctl -xe' on your host for details."
+        echo ""
+        return 1
+    fi
 }
 
 # Pull FastAPI-DLS Docker image and generate certificates
@@ -185,7 +238,7 @@ setup_fastapi_dls() {
     case "$choice" in
         y|Y)
             # Install Docker
-            install_docker
+            install_docker || return 1
             
             # Prepare FastAPI-DLS
             prepare_fastapi_dls

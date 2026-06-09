@@ -509,7 +509,7 @@ ensure_patch_compat() {
     system_patch=$(command -v patch || true)
 
     if [ -z "$system_patch" ]; then
-        run_command "Installing patch utility" "info" "apt install -y patch"
+        run_command "Installing patch utility" "info" "apt-get install -y patch"
         system_patch=$(command -v patch || true)
     fi
 
@@ -738,9 +738,9 @@ ensure_kernel_headers() {
     fi
 
     echo -e "${GREEN}[+]${NC} Installing headers for kernel $kernel_release"
-    if ! run_command "Installing pve-headers-$kernel_release" "info" "apt install -y pve-headers-$kernel_release"; then
+    if ! run_command "Installing pve-headers-$kernel_release" "info" "apt-get install -y pve-headers-$kernel_release"; then
         echo -e "${YELLOW}[-]${NC} Falling back to linux-headers-$kernel_release"
-        run_command "Installing linux-headers-$kernel_release" "info" "apt install -y linux-headers-$kernel_release"
+        run_command "Installing linux-headers-$kernel_release" "info" "apt-get install -y linux-headers-$kernel_release"
     fi
 }
 
@@ -891,8 +891,12 @@ run_command() {
     esac
 
     if [ "$DEBUG" != "true" ]; then
-        if ! eval "$command" > /dev/null 2>> "$LOG_FILE"; then
+        if ! eval "$command" > "$LOG_FILE" 2>&1; then
             echo -e "${RED}[!]${NC} Command failed: $description (see $LOG_FILE)" >&2
+            if [ -f "$LOG_FILE" ]; then
+                echo -e "${YELLOW}[-]${NC} Last 20 lines of $LOG_FILE:" >&2
+                tail -n 20 "$LOG_FILE" >&2
+            fi
             return 1
         fi
     else
@@ -1030,14 +1034,7 @@ configure_fastapi_dls() {
         case "$choice" in
         y|Y)
         # Installing Docker-CE
-        run_command "Installing Docker-CE" "info" "apt remove -y docker.io docker-compose docker-compose-v2 podman-docker || true; \
-        apt install ca-certificates curl -y; \
-        curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc; \
-        chmod a+r /etc/apt/keyrings/docker.asc; \
-        echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \$(. /etc/os-release && echo \$VERSION_CODENAME) stable\" | \
-        tee /etc/apt/sources.list.d/docker.list > /dev/null; \
-        apt update; \
-        apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y"
+        install_docker || return 1
 
         # Docker pull FastAPI-DLS
         run_command "Docker pull FastAPI-DLS" "info" "docker pull collinwebdesigns/fastapi-dls:latest; \
@@ -1561,7 +1558,12 @@ perform_step_two() {
         patched_installer=""
 
         # Pre-patched installer from alist (or left from a previous run)
-        if [ -e "$custom_filename" ]; then
+        # We only skip patching if the driver filename is already custom, OR if we don't have a patch available.
+        # If we have the original driver and a patch file, we should always apply the patch first.
+        if [[ "$driver_filename" == *-custom.run ]]; then
+            patched_installer="$driver_filename"
+            echo -e "${GREEN}[+]${NC} Using pre-patched driver: $patched_installer (skipping --apply-patch)"
+        elif [ -e "$custom_filename" ] && [ -z "$driver_patch" ]; then
             patched_installer="$custom_filename"
             echo -e "${GREEN}[+]${NC} Using pre-patched driver: $custom_filename (skipping --apply-patch)"
         fi
@@ -1809,7 +1811,7 @@ case $STEP in
             # sed -i 's#^enterprise #no-subscription#' /etc/apt/sources.list.d/ceph.list
 
             # APT update/upgrade
-            run_command "Running APT Update" "info" "apt update"
+            run_command "Running APT Update" "info" "apt-get update"
 
             # Prompt the user for confirmation (Issue #12 - Added verbose option)
             echo ""
@@ -1822,7 +1824,7 @@ case $STEP in
             if [ "$confirmation" == "y" ]; then
                 echo -e "${GREEN}[+]${NC} Starting APT Dist-Upgrade..."
                 echo -e "${CYAN}[i]${NC} You can monitor progress below:"
-                run_command "Running APT Dist-Upgrade" "info" "apt dist-upgrade -y"
+                run_command "Running APT Dist-Upgrade" "info" "apt-get dist-upgrade -y"
                 echo -e "${GREEN}[+]${NC} APT Dist-Upgrade completed successfully."
             else
                 echo -e "${YELLOW}[-]${NC} Skipping APT Dist-Upgrade"
@@ -1835,7 +1837,7 @@ case $STEP in
             echo -e "${CYAN}[i]${NC} This includes: git, build-essential, dkms, kernel headers, and utilities"
             
             # Install base packages first
-            run_command "Installing base packages" "info" "apt install -y git build-essential dkms mdevctl wget curl megatools jq mokutil unzip pve-nvidia-vgpu-helper sqlite3"
+            run_command "Installing base packages" "info" "apt-get install -y git build-essential dkms mdevctl wget curl megatools jq mokutil unzip pve-nvidia-vgpu-helper sqlite3"
             
             # Install kernel and headers with better error handling
             kernel_version=$(uname -r)
@@ -1844,24 +1846,24 @@ case $STEP in
             if secure_boot_enabled; then
                 echo -e "${CYAN}[i]${NC} Secure Boot detected — attempting to install signed kernel package."
                 if kernel_signed_available "$kernel_version"; then
-                    if ! run_command "Installing signed kernel package" "info" "apt install -y proxmox-kernel-${kernel_version}-signed" 2>/dev/null; then
+                    if ! run_command "Installing signed kernel package" "info" "apt-get install -y proxmox-kernel-${kernel_version}-signed" 2>/dev/null; then
                         echo -e "${YELLOW}[-]${NC} Signed kernel install failed, may already be installed"
                     fi
                 else
                     echo -e "${YELLOW}[!]${NC} No signed kernel package found for $kernel_version."
                     echo -e "${YELLOW}[!]${NC} Installing unsigned kernel — this may cause boot failure on Secure Boot systems."
                     echo -e "${CYAN}[i]${NC} Consider manually installing a signed kernel or disabling Secure Boot before continuing."
-                    if ! run_command "Installing kernel package (unsigned)" "info" "apt install -y proxmox-kernel-$kernel_version" 2>/dev/null; then
+                    if ! run_command "Installing kernel package (unsigned)" "info" "apt-get install -y proxmox-kernel-$kernel_version" 2>/dev/null; then
                         echo -e "${YELLOW}[-]${NC} Kernel package not available, may already be installed"
                     fi
                 fi
             else
-                if ! run_command "Installing kernel package" "info" "apt install -y proxmox-kernel-$kernel_version" 2>/dev/null; then
+                if ! run_command "Installing kernel package" "info" "apt-get install -y proxmox-kernel-$kernel_version" 2>/dev/null; then
                     echo -e "${YELLOW}[-]${NC} Kernel package not available, may already be installed"
                 fi
             fi
             
-            if ! run_command "Installing kernel headers" "info" "apt install -y proxmox-headers-$kernel_version" 2>/dev/null; then
+            if ! run_command "Installing kernel headers" "info" "apt-get install -y proxmox-headers-$kernel_version" 2>/dev/null; then
                 echo -e "${YELLOW}[-]${NC} Proxmox headers not available, trying alternative..."
                 ensure_kernel_headers
             else
@@ -2165,35 +2167,14 @@ case $STEP in
                     echo -e "${YELLOW}[-]${NC} NVIDIA services will be enabled after the driver installation completes."
 
                     # vGPU unlock patches target kernel <= 6.16; 6.17+ / 7.x need 6.14 (v1.75 behavior)
-                    if is_kernel_617_or_higher; then
-                        if [ "${major_version:-8}" -ge 9 ] && [ "$DRIVER_VERSION" = "16" ]; then
-                            echo -e "${RED}[!]${NC} Proxmox VE ${major_version:-9} does not support kernel 6.5.x, which is required for driver vGPU 16.x."
-                            echo -e "${RED}[!]${NC} Pascal or older GPUs are limited to vGPU 16.x and cannot be used on Proxmox VE 9+."
-                            echo -e "${YELLOW}[-]${NC} Please install Proxmox VE 8 if you need to use vGPU unlock with Pascal or older GPUs."
-                            exit 1
-                        fi
-                        target_k=$(discover_target_kernel_version)
-                        echo -e "${YELLOW}[-]${NC} Current kernel $(uname -r) is 6.17 or higher (includes 7.x)."
-                        echo -e "${YELLOW}[-]${NC} vGPU 16.x–19.x unlock builds require kernel 6.14.x for DKMS compilation."
-                        
-                        echo ""
-                        read -p "$(echo -e "${BLUE}[?]${NC} Do you want to downgrade and pin kernel to ${target_k} now? (y/n): ")" downgrade_choice
-                        echo ""
-                        
-                        if [ "$downgrade_choice" = "y" ] || [ "$downgrade_choice" = "Y" ]; then
-                            echo -e "${GREEN}[+]${NC} Downgrading and pinning..."
-                            if ! downgrade_kernel_for_vgpu; then
-                                echo -e "${RED}[!]${NC} Kernel downgrade failed. Install manually or use native vGPU driver 20.x on kernel 7.x."
-                                exit 1
-                            fi
-                        else
-                            echo -e "${RED}[!]${NC} You chose not to downgrade the kernel. vGPU unlock cannot function on kernel $(uname -r)."
-                            echo -e "${YELLOW}[-]${NC} Exiting."
-                            exit 1
-                        fi
-                    elif is_kernel_68_or_higher; then
+                    supports_17_plus=false
+                    if contains_version "17" || contains_version "18" || contains_version "19" || contains_version "20"; then
+                        supports_17_plus=true
+                    fi
+
+                    if [ "$supports_17_plus" = "false" ] && is_kernel_68_or_higher; then
                         if [ "${major_version:-8}" -ge 9 ]; then
-                            echo -e "${RED}[!]${NC} Proxmox VE ${major_version:-9} does not support kernel 6.5.x, which is required for driver $driver_version (vGPU 16.x)."
+                            echo -e "${RED}[!]${NC} Proxmox VE ${major_version:-9} does not support kernel 6.5.x, which is required for driver vGPU 16.x or older."
                             echo -e "${RED}[!]${NC} Pascal or older GPUs are limited to vGPU 16.x and cannot be used on Proxmox VE 9+."
                             echo -e "${YELLOW}[-]${NC} Please install Proxmox VE 8 if you need to use vGPU unlock with Pascal or older GPUs."
                             exit 1
@@ -2215,6 +2196,26 @@ case $STEP in
                             fi
                         else
                             echo -e "${RED}[!]${NC} You chose not to downgrade the kernel. Older vGPU unlock drivers cannot function on kernel $(uname -r)."
+                            echo -e "${YELLOW}[-]${NC} Exiting."
+                            exit 1
+                        fi
+                    elif [ "$supports_17_plus" = "true" ] && is_kernel_617_or_higher; then
+                        target_k=$(discover_target_kernel_version)
+                        echo -e "${YELLOW}[-]${NC} Current kernel $(uname -r) is 6.17 or higher (includes 7.x)."
+                        echo -e "${YELLOW}[-]${NC} vGPU 16.x–19.x unlock builds require kernel 6.14.x for DKMS compilation."
+                        
+                        echo ""
+                        read -p "$(echo -e "${BLUE}[?]${NC} Do you want to downgrade and pin kernel to ${target_k} now? (y/n): ")" downgrade_choice
+                        echo ""
+                        
+                        if [ "$downgrade_choice" = "y" ] || [ "$downgrade_choice" = "Y" ]; then
+                            echo -e "${GREEN}[+]${NC} Downgrading and pinning..."
+                            if ! downgrade_kernel_for_vgpu; then
+                                echo -e "${RED}[!]${NC} Kernel downgrade failed. Install manually or use native vGPU driver 20.x on kernel 7.x."
+                                exit 1
+                            fi
+                        else
+                            echo -e "${RED}[!]${NC} You chose not to downgrade the kernel. vGPU unlock cannot function on kernel $(uname -r)."
                             echo -e "${YELLOW}[-]${NC} Exiting."
                             exit 1
                         fi
@@ -2315,8 +2316,8 @@ case $STEP in
             # Clean up kernel sources (Issue #13)
             if confirm_action "Do you want to clean up kernel sources and headers?"; then
                 echo -e "${CYAN}[i]${NC} Cleaning up old kernel sources..."
-                run_command "Cleaning kernel sources" "notification" "apt autoremove -y" || true
-                run_command "Reinstalling current kernel headers" "notification" "apt install --reinstall -y proxmox-headers-$(uname -r)" || true
+                run_command "Cleaning kernel sources" "notification" "apt-get autoremove -y" || true
+                run_command "Reinstalling current kernel headers" "notification" "apt-get install --reinstall -y proxmox-headers-$(uname -r)" || true
             fi
 
             # Removing previous vgpu_unlock-rs

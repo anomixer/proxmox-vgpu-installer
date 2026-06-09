@@ -59,9 +59,9 @@ ensure_kernel_headers() {
 
     # Try pve-headers first
     log_info "Installing headers for kernel $kernel_release"
-    if ! run_command "Installing pve-headers-$kernel_release" "info" "apt install -y pve-headers-$kernel_release"; then
+    if ! run_command "Installing pve-headers-$kernel_release" "info" "apt-get install -y pve-headers-$kernel_release"; then
         log_warn "Falling back to linux-headers-$kernel_release"
-        run_command "Installing linux-headers-$kernel_release" "info" "apt install -y linux-headers-$kernel_release"
+        run_command "Installing linux-headers-$kernel_release" "info" "apt-get install -y linux-headers-$kernel_release"
     fi
 }
 
@@ -127,23 +127,20 @@ downgrade_kernel_for_vgpu() {
         log_info "Secure Boot detected — attempting to install signed kernel package."
         if kernel_signed_available "$target_kernel"; then
             log_info "Signed kernel package found: proxmox-kernel-${target_kernel}-signed"
-            run_command "Installing proxmox-kernel-${target_kernel}-signed" "info" "apt install -y proxmox-kernel-${target_kernel}-signed"
+            run_command "Installing proxmox-kernel-${target_kernel}-signed" "info" "apt-get install -y proxmox-kernel-${target_kernel}-signed"
         else
             log_warn "No signed kernel package found for $target_kernel."
             log_warn "Installing unsigned kernel — this may cause 'bad shim signature' or boot failure on Secure Boot systems!"
             log_warn "Consider manually importing/signing the kernel or disabling Secure Boot in UEFI BIOS."
-            run_command "Installing proxmox-kernel-$target_kernel" "info" "apt install -y proxmox-kernel-$target_kernel"
+            run_command "Installing proxmox-kernel-$target_kernel" "info" "apt-get install -y proxmox-kernel-$target_kernel"
         fi
     else
-        log_info "Installing proxmox-kernel-$target_kernel..."
-        run_command "Installing proxmox-kernel-$target_kernel" "info" "apt install -y proxmox-kernel-$target_kernel"
+        run_command "Installing proxmox-kernel-$target_kernel" "info" "apt-get install -y proxmox-kernel-$target_kernel"
     fi
     
-    log_info "Installing proxmox-headers-$target_kernel..."
-    run_command "Installing proxmox-headers-$target_kernel" "info" "apt install -y proxmox-headers-$target_kernel"
+    run_command "Installing proxmox-headers-$target_kernel" "info" "apt-get install -y proxmox-headers-$target_kernel"
     
     # Pin the kernel to prevent automatic upgrades
-    log_info "Pinning kernel $target_kernel..."
     run_command "Pinning kernel $target_kernel" "info" "proxmox-boot-tool kernel pin $target_kernel"
     
     log_info "Kernel downgraded to $target_kernel and pinned."
@@ -166,30 +163,29 @@ downgrade_kernel_to_65() {
         log_info "Secure Boot detected — attempting to install signed kernel package."
         if kernel_signed_available "$target_kernel"; then
             log_info "Signed kernel package found: proxmox-kernel-${target_kernel}-signed"
-            run_command "Installing proxmox-kernel-${target_kernel}-signed" "info" "apt install -y proxmox-kernel-${target_kernel}-signed"
+            run_command "Installing proxmox-kernel-${target_kernel}-signed" "info" "apt-get install -y proxmox-kernel-${target_kernel}-signed"
         else
             log_warn "No signed kernel package found for $target_kernel."
             log_warn "Installing unsigned kernel — this may cause boot failure on Secure Boot systems!"
-            run_command "Installing proxmox-kernel-$target_kernel" "info" "apt install -y proxmox-kernel-$target_kernel"
+            run_command "Installing proxmox-kernel-$target_kernel" "info" "apt-get install -y proxmox-kernel-$target_kernel"
         fi
     else
         log_info "Installing kernel package..."
         if apt-cache show "proxmox-kernel-$target_kernel" >/dev/null 2>&1; then
-            run_command "Installing proxmox-kernel-$target_kernel" "info" "apt install -y proxmox-kernel-$target_kernel"
+            run_command "Installing proxmox-kernel-$target_kernel" "info" "apt-get install -y proxmox-kernel-$target_kernel"
         else
-            run_command "Installing pve-kernel-$target_kernel" "info" "apt install -y pve-kernel-$target_kernel"
+            run_command "Installing pve-kernel-$target_kernel" "info" "apt-get install -y pve-kernel-$target_kernel"
         fi
     fi
     
     log_info "Installing headers for $target_kernel..."
     if apt-cache show "proxmox-headers-$target_kernel" >/dev/null 2>&1; then
-        run_command "Installing proxmox-headers-$target_kernel" "info" "apt install -y proxmox-headers-$target_kernel"
+        run_command "Installing proxmox-headers-$target_kernel" "info" "apt-get install -y proxmox-headers-$target_kernel"
     else
-        run_command "Installing pve-headers-$target_kernel" "info" "apt install -y pve-headers-$target_kernel"
+        run_command "Installing pve-headers-$target_kernel" "info" "apt-get install -y pve-headers-$target_kernel"
     fi
     
     # Pin the kernel to prevent automatic upgrades
-    log_info "Pinning kernel $target_kernel..."
     run_command "Pinning kernel $target_kernel" "info" "proxmox-boot-tool kernel pin $target_kernel"
     
     log_info "Kernel downgraded to $target_kernel and pinned."
@@ -234,7 +230,6 @@ is_kernel_pinned() {
 
 # Unpin kernel
 unpin_kernel() {
-    log_info "Unpinning kernel..."
     run_command "Unpinning kernel" "info" "proxmox-boot-tool kernel unpin"
 }
 
@@ -247,7 +242,6 @@ pin_kernel() {
         return 1
     fi
     
-    log_info "Pinning kernel $kernel_version..."
     run_command "Pinning kernel $kernel_version" "info" "proxmox-boot-tool kernel pin $kernel_version"
 }
 
@@ -270,19 +264,17 @@ install_kernel() {
         log_info "Secure Boot detected — attempting to install signed kernel package."
         if kernel_signed_available "$kernel_version"; then
             log_info "Signed kernel package found: proxmox-kernel-${kernel_version}-signed"
-            run_command "Installing proxmox-kernel-${kernel_version}-signed" "info" "apt install -y proxmox-kernel-${kernel_version}-signed"
+            run_command "Installing proxmox-kernel-${kernel_version}-signed" "info" "apt-get install -y proxmox-kernel-${kernel_version}-signed"
         else
             log_warn "No signed kernel package found for $kernel_version."
             log_warn "Installing unsigned kernel — this may cause boot failure on Secure Boot systems."
-            run_command "Installing proxmox-kernel-$kernel_version" "info" "apt install -y proxmox-kernel-$kernel_version"
+            run_command "Installing proxmox-kernel-$kernel_version" "info" "apt-get install -y proxmox-kernel-$kernel_version"
         fi
     else
-        log_info "Installing kernel $kernel_version..."
-        run_command "Installing proxmox-kernel-$kernel_version" "info" "apt install -y proxmox-kernel-$kernel_version"
+        run_command "Installing proxmox-kernel-$kernel_version" "info" "apt-get install -y proxmox-kernel-$kernel_version"
     fi
     
-    log_info "Installing headers for $kernel_version..."
-    run_command "Installing proxmox-headers-$kernel_version" "info" "apt install -y proxmox-headers-$kernel_version"
+    run_command "Installing proxmox-headers-$kernel_version" "info" "apt-get install -y proxmox-headers-$kernel_version"
 }
 
 # Remove old kernels (cleanup)
@@ -304,7 +296,7 @@ cleanup_old_kernels() {
     
     # Prompt for confirmation
     if confirm_action "Do you want to remove old kernels (excluding current)?"; then
-        run_command "Removing old kernels" "info" "apt autoremove -y --purge"
+        run_command "Removing old kernels" "info" "apt-get autoremove -y --purge"
         log_info "Old kernels removed"
     else
         log_info "Kernel cleanup skipped"
@@ -317,7 +309,7 @@ reinstall_current_headers() {
     kernel_release=$(uname -r)
     
     log_info "Reinstalling headers for current kernel: $kernel_release"
-    run_command "Reinstalling headers" "info" "apt install --reinstall -y proxmox-headers-$kernel_release"
+    run_command "Reinstalling headers" "info" "apt-get install --reinstall -y proxmox-headers-$kernel_release"
 }
 
 # Check if DKMS is installed
@@ -332,8 +324,7 @@ ensure_dkms() {
         return 0
     fi
     
-    log_info "Installing DKMS..."
-    run_command "Installing DKMS" "info" "apt install -y dkms"
+    run_command "Installing DKMS" "info" "apt-get install -y dkms"
 }
 
 # Get DKMS module status
