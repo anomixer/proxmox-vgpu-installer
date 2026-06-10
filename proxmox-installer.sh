@@ -1147,13 +1147,21 @@ configure_fastapi_dls() {
         case "$choice" in
         y|Y)
         # Installing Docker-CE
-        run_command "Installing Docker-CE" "info" "apt install ca-certificates curl -y; \
+        local docker_codename
+        docker_codename=$(detect_os_codename)
+        [ -z "$docker_codename" ] && docker_codename="bookworm"
+
+        run_command "Installing Docker-CE" "info" "for pkg in docker.io docker-compose docker-compose-v2 podman-docker; do \
+            if dpkg -s \$pkg >/dev/null 2>&1; then apt-get purge -y \$pkg || true; fi; \
+        done; \
+        apt-get install ca-certificates curl -y; \
+        mkdir -p /etc/apt/keyrings; \
         curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc; \
         chmod a+r /etc/apt/keyrings/docker.asc; \
-        echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \$(. /etc/os-release && echo \$VERSION_CODENAME) stable\" | \
+        echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $docker_codename stable\" | \
         tee /etc/apt/sources.list.d/docker.list > /dev/null; \
-        apt update; \
-        apt install docker-ce docker-compose -y"
+        apt-get update; \
+        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 
         # Docker pull FastAPI-DLS
         run_command "Docker pull FastAPI-DLS" "info" "docker pull collinwebdesigns/fastapi-dls:latest; \
@@ -1234,7 +1242,7 @@ volumes:
   dls-db:
 EOF
         # Issue docker-compose
-        run_command "Running Docker Compose" "info" "docker-compose -f \"$fastapi_dir/docker-compose.yml\" up -d"
+        run_command "Running Docker Compose" "info" "docker compose -f \"$fastapi_dir/docker-compose.yml\" up -d"
 
         echo -e "${BLUE}[i]${NC} FastAPI-DLS health endpoint: https://$host_address:$portnumber/-/health"
         echo -e "${BLUE}[i]${NC} Docker Compose defaults to the asyncio event loop for compatibility. Review $fastapi_dir/docker-compose.yml if you need uvloop." 
