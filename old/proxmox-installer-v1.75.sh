@@ -1888,7 +1888,7 @@ case $STEP in
             run_command "Installing base packages" "info" "apt install -y git build-essential dkms mdevctl wget curl megatools jq mokutil"
             
             # Install kernel and headers with better error handling
-            local kernel_version=$(uname -r)
+            kernel_version=$(uname -r)
             echo -e "${CYAN}[i]${NC} Current kernel: $kernel_version"
             
             if ! run_command "Installing kernel package" "info" "apt install -y proxmox-kernel-$kernel_version" 2>/dev/null; then
