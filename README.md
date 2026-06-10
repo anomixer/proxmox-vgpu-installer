@@ -418,27 +418,26 @@ systemctl status nvidia-vgpu-mgr.service
 
 The installer includes comprehensive Secure Boot integration:
 
-**Automatic Signed Kernel Installation (v1.8+)**:
-- Detects if Secure Boot is enabled via `mokutil`
-- Automatically installs `proxmox-kernel-*-signed` if available
-- Falls back to unsigned kernel with warning if signed variant unavailable
-- No behavior change when Secure Boot is disabled
+**Automatic Signed Kernel & Tooling Installation**:
+- Detects if Secure Boot is enabled directly via UEFI variables (`/sys/firmware/efi/efivars`) or fallback to `mokutil`.
+- Automatically installs required prerequisites (`shim-signed`, `grub-efi-amd64-signed`, `mokutil`) if Secure Boot is active.
+- Automatically installs `proxmox-kernel-*-signed` if available, and falls back to unsigned kernel with warning if signed variant unavailable.
+- No behavior change when Secure Boot is disabled.
 
-**MOK Key Management**:
-- Generates RSA 4096 keys for module signing
-- Automatically enrolls keys via `mokutil` during installation
-- Supports manual enrollment if needed
-- Keys backed up for recovery
+**MOK Key Management & Auto-Enrollment**:
+- Generates RSA 4096 keys for module signing.
+- Automatically enrolls keys via `mokutil` during installation.
+- Supports manual enrollment if needed, with keys backed up for recovery.
 
-**Driver Module Signing**:
-- NVIDIA driver modules automatically signed with MOK keys
-- Prevents "bad shim signature" errors on boot
-- Transparent to user - no manual intervention required
+**Persistent DKMS Module Signing (New in v1.82+)**:
+- NVIDIA driver modules are automatically signed with MOK keys during installation.
+- Configures the DKMS framework (`/etc/dkms/framework.conf.d/nvidia-vgpu.conf` or `/etc/dkms/framework.conf`) to point to the generated custom keys.
+- **Why this is critical**: This ensures that when Proxmox updates the kernel and DKMS automatically rebuilds the NVIDIA modules in the future, DKMS will automatically sign the rebuilt modules with the same enrolled key, preventing driver load failures ("bad shim signature" or module load errors) after kernel upgrades.
 
-**Issue #14 Fix**:
-- Resolves "bad shim signature" boot failures
-- Ensures signed kernel is installed when Secure Boot is active
-- Provides clear warnings if signed kernel unavailable
+**Issue #14 & Future-Proofing**:
+- Resolves "bad shim signature" boot failures.
+- Ensures signed kernel is installed when Secure Boot is active.
+- Provides clear warnings if signed kernel unavailable.
 
 ## Advanced Usage
 
