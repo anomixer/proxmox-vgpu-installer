@@ -8,11 +8,26 @@
 
 # Check if Secure Boot is enabled
 secure_boot_enabled() {
-    if ! command -v mokutil >/dev/null 2>&1; then
-        return 1
+    # Check EFI vars first if they exist
+    local sb_file="/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
+    if [ -f "$sb_file" ]; then
+        local sb_val
+        sb_val=$(od -An -t u1 -j 4 -N 1 "$sb_file" 2>/dev/null | tr -d ' ')
+        if [ "$sb_val" = "1" ]; then
+            return 0
+        elif [ "$sb_val" = "0" ]; then
+            return 1
+        fi
     fi
 
-    mokutil --sb-state 2>/dev/null | grep -qi "SecureBoot enabled"
+    # Fallback to mokutil if available
+    if command -v mokutil >/dev/null 2>&1; then
+        if mokutil --sb-state 2>/dev/null | grep -qi "SecureBoot enabled"; then
+            return 0
+        fi
+    fi
+
+    return 1
 }
 
 # Check if Secure Boot key is enrolled
@@ -63,6 +78,28 @@ generate_secure_boot_keys() {
         openssl x509 -in "$SECURE_BOOT_CERT" -inform PEM -out "$secure_boot_der" -outform DER >/dev/null 2>&1
         chmod 644 "$secure_boot_der"
     fi
+
+    # Configure DKMS to use our custom keys for automatic signing
+    if [ -d /etc/dkms ]; then
+        log_info "Configuring DKMS to use custom Secure Boot keys..."
+        if [ -d /etc/dkms/framework.conf.d ]; then
+            cat > /etc/dkms/framework.conf.d/nvidia-vgpu.conf <<EOF
+mok_signing_key="$SECURE_BOOT_KEY"
+mok_certificate="$secure_boot_der"
+EOF
+            chmod 644 /etc/dkms/framework.conf.d/nvidia-vgpu.conf
+        else
+            # Append to framework.conf if not already present
+            if [ -f /etc/dkms/framework.conf ]; then
+                if ! grep -q "mok_signing_key=\"$SECURE_BOOT_KEY\"" /etc/dkms/framework.conf; then
+                    echo "" >> /etc/dkms/framework.conf
+                    echo "mok_signing_key=\"$SECURE_BOOT_KEY\"" >> /etc/dkms/framework.conf
+                    echo "mok_certificate=\"$secure_boot_der\"" >> /etc/dkms/framework.conf
+                fi
+            fi
+        fi
+        log_info "DKMS signing configuration updated."
+    fi
 }
 
 # Prepare Secure Boot enrollment (MOK)
@@ -108,6 +145,9 @@ secure_boot_precheck() {
         remove_config_key "SECURE_BOOT_READY"
         return 0
     fi
+
+    # Secure Boot is active. Ensure prerequisites are installed.
+    ensure_mokutil
 
     log_info "Secure Boot detected."
     log_debug "Secure Boot requires kernel modules to be signed."
@@ -202,15 +242,10 @@ check_mokutil_installed() {
     command -v mokutil >/dev/null 2>&1
 }
 
-# Install mokutil if not present
+# Install mokutil and shim-signed grub-efi-amd64-signed if not present
 ensure_mokutil() {
-    if check_mokutil_installed; then
-        log_info "mokutil already installed"
-        return 0
-    fi
-    
-    log_info "Installing mokutil..."
-    run_command "Installing mokutil" "info" "apt-get install -y mokutil"
+    log_info "Ensuring Secure Boot prerequisites (shim-signed, grub-efi-amd64-signed, mokutil) are installed..."
+    run_command "Installing Secure Boot prerequisites" "info" "apt-get install -y shim-signed grub-efi-amd64-signed mokutil"
 }
 
 # Verify Secure Boot certificate
