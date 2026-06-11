@@ -60,6 +60,7 @@ Changes in version 1.75 (current release)
   - Detects when running Proxmox VE 9.1.1+ with kernel 6.17 or higher
   - Automatically downgrades and pin to kernel 6.14.11-4-pve for vGPU patch compatibility
   - Only applies to vgpu_unlock scenarios (VGPU_SUPPORT="Yes")
+- **ZFS Compatibility Guard**: Added a safety check to block kernel downgrades if the root filesystem uses OpenZFS 2.4+ features (which would cause a boot panic on kernel 6.x), restricted strictly to `vgpu_unlock` scenarios (VGPU_SUPPORT="Yes").
 - **Driver Updates**: Added vGPU 19.3 driver support (580.105.06)
 - **Bug Fixes**: Corrected v16.8 driver MD5 checksum and various driver mapping corrections
 - **Enhanced User Experience**: Improved messaging and notifications for kernel management
