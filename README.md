@@ -208,7 +208,7 @@ Changes in version 1.5
 - This is a major enhanced release for all users that integrated original author's functions and other forker's driver sources!
 - **Expanded Driver Support**: Added support for driver versions from v1.1 and [PTHyperdrive fork](https://github.com/PTHyperdrive/proxmox-vgpu-installer):
   - v16.x series: 16.0, 16.1, 16.2, 16.5, 16.7, 16.8, 16.9 (Pascal/Older GPUs)
-  - v17.x series: 17.0, 17.1, 17.3, 17.4, 17.5, 17.6 (Pascal/Newer GPUs, v17.6 Native vGPU only)
+  - v17.x series: 17.0, 17.1, 17.3, 17.4, 17.5, 17.6 (Pascal/Newer GPUs)
   - v18.x series: 18.0, 18.1, and 18.3, 18.4 (Newer GPUs, v18.1+ Native vGPU only)
   - v19.x series: 19.0, 19.1 (19.x Native vGPU only)
 - **Proxmox 7 Support**: Re-added support for Proxmox 7 with legacy driver compatibility (v16.x, v17.0).
@@ -271,7 +271,7 @@ Changes in version 1.1 (original author wvthoog's latest release)
 - **18.0**: 570.124.03 (PTHyperdrive fork addition, Pascal or newer GPUs)
 
 ### v17.x Series (Pascal/Newer GPUs)
-- **17.6**: 550.163.02 (Native vGPU only)
+- **17.6**: 550.163.02 (Pascal or newer GPUs)
 - **17.5**: 550.144.02 (Pascal or newer GPUs)
 - **17.4**: 550.127.06 (Pascal or newer GPUs)
 - **17.3**: 550.90.05 (Pascal or newer GPUs)
