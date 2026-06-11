@@ -113,8 +113,41 @@ discover_pve8_kernel_version() {
     echo "$default_fallback"
 }
 
+# Check ZFS pool compatibility for kernel downgrades (OpenZFS 2.4 features check)
+check_zfs_compatibility() {
+    # Check if root filesystem is ZFS
+    if command -v findmnt >/dev/null 2>&1 && [ "$(findmnt -n -o FSTYPE /)" = "zfs" ]; then
+        local rpool_name
+        rpool_name=$(findmnt -n -o SOURCE / | cut -d'/' -f1)
+        
+        # Check for fatal OpenZFS 2.4 features (e.g. block_cloning_endian)
+        # These features are enabled by default in PVE 9.2+ (ZFS 2.4) but unsupported by kernel 6.x (ZFS 2.2/2.3)
+        if command -v zpool >/dev/null 2>&1 && zpool get all "$rpool_name" 2>/dev/null | grep -i "block_cloning_endian" | grep -E -q "enabled|active"; then
+            echo -e "${RED}============================================================${NC}"
+            echo -e "${RED}⚠️  CRITICAL ERROR: PVE 9.2+ ZFS BOOT POOL DETECTED! ⚠️${NC}"
+            echo -e "${RED}============================================================${NC}"
+            echo -e "${YELLOW}偵測到您的系統使用 PVE 9.2+ (ZFS 2.4) 的 ZFS 根目錄引導。${NC}"
+            echo -e "${YELLOW}該儲存池已啟用 'block_cloning_endian' 功能標籤，這與 Kernel 6.x 完全不相容。${NC}"
+            echo ""
+            echo -e "${RED}[致命衝突] 該 ZFS 磁碟環境與任何 Kernel 6.x (vgpu_unlock 必備) 完全互斥！${NC}"
+            echo -e "${WHITE}若此時強行安裝、固定或切換到 6.x 核心，重啟後將 100% 卡死在 (initramfs) 畫面。${NC}"
+            echo ""
+            echo -e "${YELLOW}[唯一修正路線]：${NC}"
+            echo -e " 1. 請先備份您的 VM 與設定檔。"
+            echo -e " 2. 使用 ${GREEN}PVE 9.1.1${NC} (或更早版) 官方 ISO 重新乾淨安裝系統。"
+            echo -e " 3. 重新安裝後，使用 'apt-mark hold proxmox-ve pve-manager proxmox-kernel-7.0' 防止升級到 ZFS 2.4。"
+            echo -e "${RED}============================================================${NC}"
+            echo ""
+            exit 1
+        fi
+    fi
+}
+
 # Downgrade kernel to 6.14 for vGPU unlock compatibility (v1.75)
 downgrade_kernel_for_vgpu() {
+    # Check ZFS pool compatibility before downgrading
+    check_zfs_compatibility
+
     local target_kernel
     target_kernel=$(discover_target_kernel_version)
     
@@ -151,6 +184,9 @@ downgrade_kernel_for_vgpu() {
 
 # Downgrade kernel to 6.5 for vGPU unlock compatibility on Proxmox 8
 downgrade_kernel_to_65() {
+    # Check ZFS pool compatibility before downgrading
+    check_zfs_compatibility
+
     local target_kernel
     target_kernel=$(discover_pve8_kernel_version)
     
