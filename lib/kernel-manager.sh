@@ -115,6 +115,11 @@ discover_pve8_kernel_version() {
 
 # Check ZFS pool compatibility for kernel downgrades (OpenZFS 2.4 features check)
 check_zfs_compatibility() {
+    # Only perform the check if vgpu_unlock is required (VGPU_SUPPORT is "Yes")
+    if [ "${VGPU_SUPPORT:-}" != "Yes" ]; then
+        return 0
+    fi
+
     # Check if root filesystem is ZFS
     if command -v findmnt >/dev/null 2>&1 && [ "$(findmnt -n -o FSTYPE /)" = "zfs" ]; then
         local rpool_name

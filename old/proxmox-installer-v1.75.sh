@@ -467,6 +467,42 @@ is_kernel_617_or_higher() {
     version_ge "$current_kernel" "6.17"
 }
 
+# Check ZFS pool compatibility for kernel downgrades (OpenZFS 2.4 features check)
+check_zfs_compatibility() {
+    # Only perform the check if vgpu_unlock is required (VGPU_SUPPORT is "Yes")
+    if [ "${VGPU_SUPPORT:-}" != "Yes" ]; then
+        return 0
+    fi
+
+    # Check if root filesystem is ZFS
+    if command -v findmnt >/dev/null 2>&1 && [ "$(findmnt -n -o FSTYPE /)" = "zfs" ]; then
+        local rpool_name
+        rpool_name=$(findmnt -n -o SOURCE / | cut -d'/' -f1)
+        
+        # Check for fatal OpenZFS 2.4 features (e.g. block_cloning_endian)
+        # These features are enabled by default in PVE 9.2+ (ZFS 2.4) but unsupported by kernel 6.x (ZFS 2.2/2.3)
+        if command -v zpool >/dev/null 2>&1 && zpool get all "$rpool_name" 2>/dev/null | grep -i "block_cloning_endian" | grep -E -q "enabled|active"; then
+            echo -e "${RED}============================================================${NC}"
+            echo -e "${RED}⚠️  CRITICAL ERROR: INCOMPATIBLE PVE 9.2+ ZFS ROOT POOL! ⚠️${NC}"
+            echo -e "${RED}============================================================${NC}"
+            echo -e "${YELLOW}Your root filesystem is ZFS and was created/upgraded on PVE 9.2+ (ZFS 2.4).${NC}"
+            echo -e "${YELLOW}This pool has OpenZFS 2.4 features enabled (e.g., 'block_cloning_endian').${NC}"
+            echo ""
+            echo -e "${RED}[Fatal Conflict] ZFS 2.4 features are NOT supported by Kernel 6.x (ZFS 2.2/2.3).${NC}"
+            echo -e "${WHITE}If you downgrade to kernel 6.x, your system WILL fail to boot and drop to the (initramfs) shell!${NC}"
+            echo ""
+            echo -e "${YELLOW}[Recommended Fix]:${NC}"
+            echo -e " 1. Back up your VMs and configuration files (/etc/pve)."
+            echo -e " 2. Clean install Proxmox VE using ${GREEN}PVE 9.1.1${NC} (or older) ISO."
+            echo -e " 3. Freeze system version immediately after install to prevent upgrading to ZFS 2.4:"
+            echo -e "    'apt-mark hold proxmox-ve pve-manager proxmox-kernel-7.0'"
+            echo -e "${RED}============================================================${NC}"
+            echo ""
+            exit 1
+        fi
+    fi
+}
+
 sync_fastapi_flag() {
     if [ -n "${driver_version:-}" ] && version_ge "$driver_version" "18.0"; then
         FASTAPI_WARNING=1
@@ -2249,6 +2285,7 @@ case $STEP in
 
                     # Check if kernel is 6.17 or higher and downgrade to 6.14 for vGPU patch compatibility
                     if is_kernel_617_or_higher; then
+                        check_zfs_compatibility
                         echo -e "${YELLOW}[-]${NC} Current kernel $(uname -r) is 6.17 or higher. Downgrading to 6.14.11-4-pve for vGPU patch compatibility."
 
                         # Install older kernel and headers
