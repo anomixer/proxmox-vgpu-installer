@@ -169,7 +169,7 @@ Changes in version 1.1 (original author wvthoog's latest release)
 - **18.4**: 570.172.07 (stable)
 - **18.3**: 570.158.02 (older stable)
 - **18.1**: 570.133.10 (PTHyperdrive fork addition)
-- **18.0**: 570.124.03 (PTHyperdrive fork addition, Pascal or newer GPUs)
+- **18.0**: 570.124.03 (PTHyperdrive fork addition, Turing or newer GPUs)
 
 ### v17.x Series (Turing/Newer GPUs)
 - **17.6**: 550.163.02 (Turing or newer GPUs)
