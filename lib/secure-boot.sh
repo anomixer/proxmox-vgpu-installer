@@ -46,7 +46,7 @@ secure_boot_key_enrolled() {
         return 1
     fi
 
-    mokutil --list-enrolled 2>/dev/null | tr -d ':' | tr '[:lower:]' '[:upper:]' | grep -q "$fingerprint"
+    mokutil --list-enrolled 2>/dev/null | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]' | grep -q "$fingerprint"
 }
 
 # Generate Secure Boot module signing keys
