@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/guest-drivers.sh - Guest driver management
-# Part of proxmox-vgpu-installer v1.82
+# Part of proxmox-vgpu-installer v1.83
 # Handles guest driver catalog, resolution, and downloads
 
 # Guest driver arrays (declared in main script)

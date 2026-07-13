@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/gpu-detect.sh - GPU detection and compatibility checking
-# Part of proxmox-vgpu-installer v1.82
+# Part of proxmox-vgpu-installer v1.83
 # Handles GPU detection, database queries, and vGPU capability assessment
 
 # Query GPU information from database
@@ -156,6 +156,10 @@ detect_single_gpu() {
     echo "Chip: $GPU_CHIP"
     echo "Status: $(get_vgpu_support_description "$GPU_VGPU_SUPPORT" "$GPU_DRIVER_VERSION")"
     echo ""
+    if [[ "$GPU_VGPU_SUPPORT" == "Yes" ]]; then
+        echo -e "${YELLOW}[!] Your card should be vGPU Unlock Capable, but it does not guarantee a successful installation. Please use at your own risk.${NC}"
+        echo -e "${YELLOW}[!] We hope users will provide feedback to help make the gpu_info.db database more complete.${NC}"
+    fi
     
     # Set global VGPU_SUPPORT and DRIVER_VERSION
     export VGPU_SUPPORT="$GPU_VGPU_SUPPORT"
@@ -255,6 +259,10 @@ detect_multiple_gpus() {
     if [ -n "$query_result" ]; then
         parse_gpu_info "$query_result"
         log_info "You selected GPU: $GPU_DESCRIPTION with Device ID: $gpu_device_id on PCI bus 0000:$selected_pci_id"
+        if [[ "$GPU_VGPU_SUPPORT" == "Yes" ]]; then
+            echo -e "${YELLOW}[!] Your card should be vGPU Unlock Capable, but it does not guarantee a successful installation. Please use at your own risk.${NC}"
+            echo -e "${YELLOW}[!] We hope users will provide feedback to help make the gpu_info.db database more complete.${NC}"
+        fi
         
         # Set global variables
         export VGPU_SUPPORT="$GPU_VGPU_SUPPORT"

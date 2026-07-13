@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/driver-manager.sh - Driver management functions
-# Part of proxmox-vgpu-installer v1.83
+# Part of proxmox-vgpu-installer v1.82
 # Handles driver download, registration, and installation
 
 # Driver registry arrays (declared in main script, used here)

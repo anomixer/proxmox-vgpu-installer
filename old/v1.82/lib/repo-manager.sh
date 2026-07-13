@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/repo-manager.sh - APT repository management
-# Part of proxmox-vgpu-installer v1.8
+# Part of proxmox-vgpu-installer v1.82
 # Handles Proxmox repository configuration (*.list and *.sources formats)
 
 # Detect OS codename
@@ -202,7 +202,6 @@ configure_proxmox_repos() {
         fi
 
         if [ -n "$pve_sources_file" ]; then
-            log_info "Adding no-subscription repository to $pve_sources_file"
             add_nosubscription_to_sources "$pve_sources_file" "$pve_uri" "$codename" "$pve_components"
             
             # Remove standalone files/duplicates
@@ -257,7 +256,6 @@ configure_proxmox_repos() {
         if [ "$use_sources_format" = true ]; then
             # For Trixie: Add no-subscription to ceph.sources
             if [ -f "/etc/apt/sources.list.d/ceph.sources" ]; then
-                log_info "Adding no-subscription repository to ceph.sources"
                 add_nosubscription_to_sources "/etc/apt/sources.list.d/ceph.sources" "$ceph_uri" "$codename" "$ceph_components"
                 
                 # Remove standalone ceph-no-subscription.sources if it exists

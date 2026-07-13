@@ -101,7 +101,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.83
+SCRIPT_VERSION=1.82
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -1757,8 +1757,8 @@ fi
 # Welcome message and disclaimer
 echo -e ""
 echo -e "${GREEN}        __________  __  __   ____           __        ____          "
-echo -e "${YELLOW} _   __${GREEN}/ ____/ __ \/ / / /  /  _/___  _____/ /_____  / / /__  _____ "
-echo -e "${YELLOW}| | / /${GREEN} / __/ /_/ / / / /   / // __ \/ ___/ __/ __ '/ / /  _\/ ___/ "
+echo -e "${YELLOW} _   __${GREEN}/ ____/ __ \/ / / /  /  _/___  _____/ /_____ _/ / /__  _____ "
+echo -e "${YELLOW}| | / /${GREEN} / __/ /_/ / / / /   / // __ \/ ___/ __/ __ ' / / / _\/ ___/ "
 echo -e "${YELLOW}| |/ /${GREEN} /_/ / ____/ /_/ /  _/ // / / (__  ) /_/ /_/ / / /  __/ /     "
 echo -e "${YELLOW}|___/${GREEN}\____/_/    \____/  /___/_/ /_/____/\__/\__,_/_/_/\___/_/      ${NC}"
 echo -e "${GREEN}By anomixer${NC} (based on wvthoog.nl's v1.1 script)"
@@ -1947,8 +1947,6 @@ case $STEP in
                         VGPU_SUPPORT="No"
                     elif [[ "$vgpu" == "Yes" ]]; then
                         echo "$description is vGPU capable through vgpu_unlock with driver version $driver"
-                        echo -e "${YELLOW}[!] Your card should be vGPU Unlock Capable, but it does not guarantee a successful installation. Please use at your own risk.${NC}"
-                        echo -e "${YELLOW}[!] We hope users will provide feedback to help make the gpu_info.db database more complete.${NC}"
                         VGPU_SUPPORT="Yes"
                         DRIVER_VERSION=$driver
                     elif [[ "$vgpu" == "Native" ]]; then
@@ -2084,10 +2082,6 @@ case $STEP in
                     echo -e "${GREEN}[*]${NC} You selected GPU: $description with Device ID: $gpu_device_id on PCI bus 0000:$selected_pci_id"
                     DRIVER_VERSION=$driver
                     VGPU_SUPPORT=$vgpu
-                    if [[ "$VGPU_SUPPORT" == "Yes" ]]; then
-                        echo -e "${YELLOW}[!] Your card should be vGPU Unlock Capable, but it does not guarantee a successful installation. Please use at your own risk.${NC}"
-                        echo -e "${YELLOW}[!] We hope users will provide feedback to help make the gpu_info.db database more complete.${NC}"
-                    fi
                 else
                     echo -e "${RED}[!]${NC} GPU Device ID: $gpu_device_id not found in the database."
                 fi
