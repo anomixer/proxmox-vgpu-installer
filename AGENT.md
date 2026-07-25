@@ -4,9 +4,9 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 
 ## Quick Context
 
-**Project**: Proxmox vGPU Installer v1.83  
+**Project**: Proxmox vGPU Installer v1.84  
 **Status**: Stable release (main branch)  
-**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, kernel 6.8+ compatibility fixes, Proxmox 9 + Pascal guards  
+**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, manual GPU override & unflagged card unlock support, Proxmox 9 + Pascal guards  
 **Key Files**: `proxmox-installer.sh`, `lib/*.sh`, `driver_patches.json`, `gpu_info.db`
 
 ---
@@ -17,7 +17,7 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 This repository contains a comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. The project handles the complex process of setting up vGPU support including driver installation, patching, licensing, and system configuration with support for both native vGPU and vgpu_unlock capabilities.
 
 ### Main Components
-- **proxmox-installer.sh** - Main installer (v1.83, supports driver 16.x-20.1)
+- **proxmox-installer.sh** - Main installer (v1.84, supports driver 16.x-20.1)
 - **lib/*.sh** - Modular components (repo, kernel, driver, GPU detection, etc.)
 - **config.txt** - Runtime configuration (step, driver version, vGPU support)
 - **gpu_info.db** - SQLite database with GPU compatibility info
@@ -38,9 +38,12 @@ This repository contains a comprehensive Bash script that automates the installa
 
 ---
 
-## v1.8 & v1.81 & v1.82 & v1.83 Features & Improvements
+## v1.8 & v1.81 & v1.82 & v1.83 & v1.84 Features & Improvements
 
-### v1.83 Hotfixes & Compatibility Updates (Latest)
+### v1.84 Manual Override & Unregistered GPU Opt-in (Latest)
+- **Manual GPU Override & Opt-in Prompt**: Removed hard error termination when a card is not in `gpu_info.db` or marked `No`. The installer displays a warning about `vgpu_unlock` PCI ID range spoofing and lets the user opt-in (`y/n`) to force enable `vgpu_unlock` mode at their own risk.
+
+### v1.83 Hotfixes & Compatibility Updates
 - **vGPU Unlock warning disclaimer**: Added a prominent disclaimer/caution warning during Step 1 and Step 2 GPU detection/selection screens for any vGPU Unlock Capable card to alert the user that success is best-effort and they proceed at their own risk.
 
 ### v1.82 Hotfixes & Compatibility Updates

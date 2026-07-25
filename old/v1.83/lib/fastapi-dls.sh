@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/fastapi-dls.sh - FastAPI-DLS licensing server setup
-# Part of proxmox-vgpu-installer v1.84
+# Part of proxmox-vgpu-installer v1.83
 # Handles FastAPI-DLS Docker deployment and license token generation
 
 # Detect primary IP address

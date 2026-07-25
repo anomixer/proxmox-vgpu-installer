@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/gpu-detect.sh - GPU detection and compatibility checking
-# Part of proxmox-vgpu-installer v1.84
+# Part of proxmox-vgpu-installer v1.83
 # Handles GPU detection, database queries, and vGPU capability assessment
 
 # Query GPU information from database
@@ -118,43 +118,6 @@ get_vgpu_support_description() {
     esac
 }
 
-# Prompt user for manual override when GPU is unsupported or missing from database
-prompt_gpu_override() {
-    local device_id="$1"
-    local desc="${2:-NVIDIA GPU [10de:$device_id]}"
-    local is_missing_from_db="$3"
-
-    echo ""
-    echo -e "${YELLOW}[!] WARNING: Card [10de:$device_id] - $desc${NC}"
-    if [ "$is_missing_from_db" = "true" ]; then
-        echo -e "${YELLOW}[!] This card is NOT registered in gpu_info.db.${NC}"
-    else
-        echo -e "${YELLOW}[!] This card is currently marked as unsupported ('No') in gpu_info.db.${NC}"
-    fi
-    echo -e "${YELLOW}[!] Note: vgpu_unlock uses runtime PCI ID range spoofing (Maxwell, Pascal, Turing, Ampere, etc.).${NC}"
-    echo -e "${YELLOW}[!] Even if not registered or marked unsupported, cards sharing a chip family with supported cards may still work!${NC}"
-    echo ""
-
-    if confirm_action "Do you want to force enable vgpu_unlock mode for this card (at your own risk)?"; then
-        export GPU_VENDOR_ID="10de"
-        export GPU_DEVICE_ID="$device_id"
-        export GPU_DESCRIPTION="$desc (Manual Override)"
-        export GPU_VGPU_SUPPORT="Yes"
-        export GPU_DRIVER_VERSION="${GPU_DRIVER_VERSION:-17,16,15}"
-        export GPU_CHIP="${GPU_CHIP:-Unknown}"
-
-        export VGPU_SUPPORT="Yes"
-        export DRIVER_VERSION="$GPU_DRIVER_VERSION"
-        log_info "Manual override enabled: vgpu_unlock set to Yes for device 10de:$device_id"
-        return 0
-    else
-        log_warn "Manual override declined. Setting vGPU support to No."
-        export VGPU_SUPPORT="No"
-        export DRIVER_VERSION="${GPU_DRIVER_VERSION:-17,16,15}"
-        return 0
-    fi
-}
-
 # Detect single GPU and set global variables
 detect_single_gpu() {
     local gpu_info
@@ -179,15 +142,8 @@ detect_single_gpu() {
     query_result=$(query_gpu_info "$gpu_device_id")
     
     if [ -z "$query_result" ]; then
-        log_warn "Device ID 10de:$gpu_device_id not found in gpu_info.db"
-        local extracted_desc
-        extracted_desc=$(echo "$gpu_info" | sed -E 's/.*Controller \[[0-9a-fA-F]{4}\]: NVIDIA Corporation (.*) \[10de:[0-9a-fA-F]{2,4}\].*/\1/' || true)
-        if [ -z "$extracted_desc" ]; then
-            extracted_desc="NVIDIA GPU [10de:$gpu_device_id]"
-        fi
-        
-        prompt_gpu_override "$gpu_device_id" "$extracted_desc" "true"
-        return $?
+        log_error "Device ID $gpu_device_id not found in database"
+        return 1
     fi
     
     # Parse GPU info
@@ -203,14 +159,11 @@ detect_single_gpu() {
     if [[ "$GPU_VGPU_SUPPORT" == "Yes" ]]; then
         echo -e "${YELLOW}[!] Your card should be vGPU Unlock Capable, but it does not guarantee a successful installation. Please use at your own risk.${NC}"
         echo -e "${YELLOW}[!] We hope users will provide feedback to help make the gpu_info.db database more complete.${NC}"
-        export VGPU_SUPPORT="$GPU_VGPU_SUPPORT"
-        export DRIVER_VERSION="$GPU_DRIVER_VERSION"
-    elif [[ "$GPU_VGPU_SUPPORT" == "No" || "$GPU_VGPU_SUPPORT" == "Unknown" ]]; then
-        prompt_gpu_override "$gpu_device_id" "$GPU_DESCRIPTION" "false"
-    else
-        export VGPU_SUPPORT="$GPU_VGPU_SUPPORT"
-        export DRIVER_VERSION="$GPU_DRIVER_VERSION"
     fi
+    
+    # Set global VGPU_SUPPORT and DRIVER_VERSION
+    export VGPU_SUPPORT="$GPU_VGPU_SUPPORT"
+    export DRIVER_VERSION="$GPU_DRIVER_VERSION"
     
     return 0
 }
@@ -303,44 +256,32 @@ detect_multiple_gpus() {
     local gpu_device_id=${gpu_pci_groups[$selected_pci_id]}
     local query_result=$(query_gpu_info "$gpu_device_id")
     
-    # Store selected PCI ID and other GPUs for passthrough
-    export SELECTED_PCI_ID="$selected_pci_id"
-    export -a OTHER_GPU_PCI_IDS=()
-    for pci_id in "${!gpu_pci_groups[@]}"; do
-        if [ "$pci_id" != "$selected_pci_id" ]; then
-            OTHER_GPU_PCI_IDS+=("$pci_id")
-        fi
-    done
-
-    if [ -z "$query_result" ]; then
-        log_warn "Selected GPU Device ID: 10de:$gpu_device_id on PCI bus 0000:$selected_pci_id not found in gpu_info.db"
-        local raw_line
-        raw_line=$(echo "$gpu_devices" | grep "^$selected_pci_id" || true)
-        local extracted_desc
-        extracted_desc=$(echo "$raw_line" | sed -E 's/.*Controller \[[0-9a-fA-F]{4}\]: NVIDIA Corporation (.*) \[10de:[0-9a-fA-F]{2,4}\].*/\1/' || true)
-        if [ -z "$extracted_desc" ]; then
-            extracted_desc="NVIDIA GPU [10de:$gpu_device_id]"
+    if [ -n "$query_result" ]; then
+        parse_gpu_info "$query_result"
+        log_info "You selected GPU: $GPU_DESCRIPTION with Device ID: $gpu_device_id on PCI bus 0000:$selected_pci_id"
+        if [[ "$GPU_VGPU_SUPPORT" == "Yes" ]]; then
+            echo -e "${YELLOW}[!] Your card should be vGPU Unlock Capable, but it does not guarantee a successful installation. Please use at your own risk.${NC}"
+            echo -e "${YELLOW}[!] We hope users will provide feedback to help make the gpu_info.db database more complete.${NC}"
         fi
         
-        prompt_gpu_override "$gpu_device_id" "$extracted_desc" "true"
-        return $?
-    fi
-    
-    parse_gpu_info "$query_result"
-    log_info "You selected GPU: $GPU_DESCRIPTION with Device ID: $gpu_device_id on PCI bus 0000:$selected_pci_id"
-    if [[ "$GPU_VGPU_SUPPORT" == "Yes" ]]; then
-        echo -e "${YELLOW}[!] Your card should be vGPU Unlock Capable, but it does not guarantee a successful installation. Please use at your own risk.${NC}"
-        echo -e "${YELLOW}[!] We hope users will provide feedback to help make the gpu_info.db database more complete.${NC}"
+        # Set global variables
         export VGPU_SUPPORT="$GPU_VGPU_SUPPORT"
         export DRIVER_VERSION="$GPU_DRIVER_VERSION"
-    elif [[ "$GPU_VGPU_SUPPORT" == "No" || "$GPU_VGPU_SUPPORT" == "Unknown" ]]; then
-        prompt_gpu_override "$gpu_device_id" "$GPU_DESCRIPTION" "false"
+        export SELECTED_PCI_ID="$selected_pci_id"
+        
+        # Store other GPUs for passthrough
+        export -a OTHER_GPU_PCI_IDS=()
+        for pci_id in "${!gpu_pci_groups[@]}"; do
+            if [ "$pci_id" != "$selected_pci_id" ]; then
+                OTHER_GPU_PCI_IDS+=("$pci_id")
+            fi
+        done
+        
+        return 0
     else
-        export VGPU_SUPPORT="$GPU_VGPU_SUPPORT"
-        export DRIVER_VERSION="$GPU_DRIVER_VERSION"
+        log_error "GPU Device ID: $gpu_device_id not found in the database"
+        return 1
     fi
-
-    return 0
 }
 
 # Main GPU detection function

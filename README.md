@@ -1,4 +1,4 @@
-# Proxmox vGPU Installer v1.83
+# Proxmox vGPU Installer v1.84
 
 A comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. This tool supports multiple GPU types, driver versions, and provides both native vGPU and vgpu_unlock capabilities.
 
@@ -83,12 +83,18 @@ Use the following decision rule before running the installer:
 
 ## Version History
 
-Changes in version 1.83 (latest release)
+Changes in version 1.84 (latest release)
+- **Manual Override & Unregistered GPU Opt-in Support**:
+  - Removed strict hard gate blocking for GPUs missing from `gpu_info.db` or marked as unsupported (`No`).
+  - Added an interactive warning prompt during GPU detection, explaining PCI ID range spoofing in `vgpu_unlock` (Maxwell, Pascal, Turing, Ampere, etc.).
+  - Users can now opt-in (`y/n`) to force enable `vgpu_unlock` mode at their own risk even if the card is not registered in the database.
+
+Changes in version 1.83 (previous release)
 - **vGPU Unlock Database Update & Warning Disclaimer**:
   - Updated the compatibility database `gpu_info.db` to mark all Maxwell, Pascal, Volta, and Turing GPUs previously labeled as `No` (non-capable) as `Yes` (vGPU Unlock Capable), unlocking virtual GPU capabilities for these architecture generations.
   - Added a prominent warning message in the installation flow (Step 1 and Step 2 detection/selection) for vGPU Unlock Capable cards, prompting users to use the tool at their own risk and provide feedback.
 
-Changes in version 1.82 (previous release)
+Changes in version 1.82
 - **Proxmox VE 9 + Pascal GPU Compatibility Guard (Issue #23)**: Proxmox VE 9 (running kernel 6.14/7.x) does not support kernel 6.5.x, which is required for driver versions older than 17.6 (like vGPU 16.x). If a user attempts to install vGPU 16.x on Proxmox VE 9, the script now cleanly aborts with a clear warning instead of attempting an impossible kernel downgrade on Proxmox 9. It advises installing Proxmox VE 8 instead.
 - **Turing GPU Kernel Downgrade Check Fix**: Refined kernel checking in Step 1 to bypass false kernel downgrade prompts for Turing and newer GeForce GPUs on newer PVE kernels (up to 6.16), correctly enabling them to run vGPU 17.6+ unlock builds on modern systems.
 - **Docker-CE Installation & Conflict Fix**: Resolved package conflicts on Debian 13/Proxmox VE 9 where the official `docker-compose-plugin` clashed with pre-installed legacy `docker-compose` files. Implemented a robust `dpkg -s` check to purge conflicting packages individually.
