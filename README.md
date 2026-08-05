@@ -26,6 +26,8 @@ For complete documentation on script architecture, features, and usage, visit ht
 | **Ampere & Newer** (GA/AD/GB) | **vGPU Unlock** (GeForce) | RTX 3080, RTX 4090, RTX 5090 | **NOT SUPPORTED** | N/A | N/A | Not supported for unlock by this project. |
 | **Ampere & Newer** (GA/AD/GB) | **Native vGPU** (Enterprise) | A10, A16, L4, RTX A6000 | vGPU 16.x to 20.x | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Native vGPU path on current PVE branches. |
 
+> **x86_64 only.** This matrix and the installer target Proxmox VE on **amd64 (x86_64)**. NVIDIA vGPU driver packages and `vgpu_unlock` patches used here are x86_64-only. **ARM64 (arm64/aarch64) hosts are not supported** — see [Platform Support](#platform-support) for details.
+
 ### Clear Rule of Thumb
 
 Use the following decision rule before running the installer:
@@ -49,11 +51,25 @@ Use the following decision rule before running the installer:
 
 ## Installation Requirements
 
-- Proxmox VE 7.x, 8.x, or 9.x
+- Proxmox VE 7.x, 8.x, or 9.x (**x86_64 / amd64 only**)
 - NVIDIA GPU with vGPU support (native or via vgpu_unlock)
 - Internet connection for driver downloads
 - Root access
 - Minimum 8GB RAM recommended
+
+## Platform Support
+
+This installer targets **x86_64 (amd64)** Proxmox VE installations exclusively. The vGPU driver packages, `vgpu_unlock` patches, and DKMS build toolchain used by this script are all x86_64-only binaries from NVIDIA.
+
+**ARM64 (arm64 / aarch64)** — [Proxmox VE 9.2+ now has official ARM64 support](https://forum.proxmox.com/threads/proxmox-virtual-environment-now-available-for-64-bit-arm-arm64.185526/), but vGPU is **not available on ARM64**:
+
+- NVIDIA vGPU host drivers are x86_64-only; there are no ARM64 vGPU or `vgpu_unlock` driver builds.
+- Intel GVT-g mediated vGPUs are listed as **x86-only** by Proxmox.
+- On ARM64, the only NVIDIA GPU access paths are:
+  - **PCIe passthrough** — assign a whole physical GPU to a single VM (works where the ARM host supports UEFI + ACPI + IOMMU passthrough).
+  - **MIG** (Multi-Instance GPU) — where the card and host combination supports it, MIG instances can be created on the host CLI and passed through. This is a hardware partitioning feature, not mediated vGPU sharing.
+
+> **Note**: `vgpu_unlock` (the consumer GeForce unlock path) does not support ARM64 and has no plans to, as it relies on x86_64-only NVIDIA driver binaries.
 
 ## Quick Start
 
