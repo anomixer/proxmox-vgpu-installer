@@ -4,9 +4,9 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 
 ## Quick Context
 
-**Project**: Proxmox vGPU Installer v1.84  
-**Status**: Stable release (main branch)  
-**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, manual GPU override & unflagged card unlock support, Proxmox 9 + Pascal guards  
+**Project**: Proxmox vGPU Installer v1.85
+**Status**: Stable release (main branch)
+**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, manual GPU override & unflagged card unlock support, Proxmox 9 + Pascal guards, experimental merged driver builder (Issue #10)
 **Key Files**: `proxmox-installer.sh`, `lib/*.sh`, `driver_patches.json`, `gpu_info.db`
 
 ---
@@ -17,8 +17,9 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 This repository contains a comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. The project handles the complex process of setting up vGPU support including driver installation, patching, licensing, and system configuration with support for both native vGPU and vgpu_unlock capabilities.
 
 ### Main Components
-- **proxmox-installer.sh** - Main installer (v1.84, supports driver 16.x-20.1)
+- **proxmox-installer.sh** - Main installer (v1.85, supports driver 16.x-20.1 + experimental merged 550.90/570.124/580.126/580.159)
 - **lib/*.sh** - Modular components (repo, kernel, driver, GPU detection, etc.)
+- **lib/vgpu-merge.sh** - Experimental merged builder (vGPU-Unlock-Patcher, Issue #10)
 - **config.txt** - Runtime configuration (step, driver version, vGPU support)
 - **gpu_info.db** - SQLite database with GPU compatibility info
 - **driver_patches.json** - Patch-to-driver mapping
@@ -38,9 +39,22 @@ This repository contains a comprehensive Bash script that automates the installa
 
 ---
 
-## v1.8 & v1.81 & v1.82 & v1.83 & v1.84 Features & Improvements
+## v1.85 & v1.84 Features & Improvements
 
-### v1.84 Manual Override & Unregistered GPU Opt-in (Latest)
+### v1.85 Experimental Merged Driver Builder (Issue #10, Latest)
+- **Menu option 7 `Build merged driver (experimental)`** (`lib/vgpu-merge.sh`): clones `greglechin/vGPU-Unlock-Patcher` (`--recursive --branch`) for 4 branches only — `550.90`→17.3 legacy, `570.124`→18.0, `580.126`→19.4, `580.159`→19.5 — then `./patch.sh --repack <vgpu-kvm|general-merge>`.
+- **Inputs**: VGPU `.run` staged from installer cwd or fetched via existing alist `resolve_host_driver_url` fallback; `general-merge` additionally requires the matching GNRL consumer `.run` placed manually (NVIDIA portal / driver archive).
+- **Install**: `--dkms -m=kernel -s` (+ `build_secure_boot_flags`), then reuses Step-2 tail (services, `nvidia-smi` check, guest drivers, FastAPI-DLS, summary). Persists `DRIVER_VERSION`/`MERGE_BRANCH` to `config.txt`.
+- **Guards**: warns on kernel 6.17+/7.x; `ensure_patch_compat`; `patchelf/gcc/make` auto-install via `merge_ensure_deps`; primary → fallback (`benjamindoron`) clone remotes.
+- **Cleanup**: option 3 offers `rm -rf $VGPU_DIR/vgpu-unlock-patcher-*`; `remove_merged_patcher` helper.
+- **Scope**: default unlock path (options 1-2, `vgpu-proxmox` + `vgpu_unlock-rs`, `driver_patches.json` 16.x–17.6) is unchanged.
+- **Menu flow**: merged path is `1 → reboot → 7` (option 7 replaces Step 2; never run option 2 after 7). README documents the driver-branch picker (Pascal caps at 19.x, Issue #29) and the two paths.
+
+### Issue #29 Note (Pascal + 20.x)
+- `perform_step_two` captures the Step 1 `DRIVER_VERSION` hint before the driver menu; if the user picks `20.x` while the hint's max branch is 16 (contains `16` but no `17+`), the installer prints a **non-blocking warning only** and continues — no gate, per the v1.84+ liberation philosophy.
+- The `17;16`-style hints (Turing/Volta, e.g. T4/2080Ti/V100) intentionally do NOT trigger.
+
+### v1.84 Manual Override & Unregistered GPU Opt-in (Previous)
 - **Manual GPU Override & Opt-in Prompt**: Removed hard error termination when a card is not in `gpu_info.db` or marked `No`. The installer displays a warning about `vgpu_unlock` PCI ID range spoofing and lets the user opt-in (`y/n`) to force enable `vgpu_unlock` mode at their own risk.
 
 ### v1.83 Hotfixes & Compatibility Updates
@@ -171,20 +185,16 @@ To reset to auto-discovery: remove `URL` / `FILE` from `config.txt`.
 ## Known Limitations & Future Considerations
 
 ### Issue #10: vGPU-Unlock-Patcher Integration
-**Status**: Evaluated, not integrated
+**Status**: Implemented as experimental opt-in (v1.85, menu option 7)
 
-**Analysis:**
-- vGPU-Unlock-Patcher only supports patches up to 580.126 (vGPU 19.1)
-- We already support up to 595.71.03 (vGPU 20.1)
-- No patches available for 19.2+, 20.x versions
-- Community project not actively maintained for new releases
+**Scope:**
+- Patcher branches: 550.90 (17.3 legacy), 570.124 (18.0), 580.126 (19.4), 580.159 (19.5 latest greglechin)
+- Targets: `vgpu-kvm` (Proxmox default) and `general-merge` (host CUDA/OpenGL + vGPU)
+- No coverage for 19.0–19.3, 18.1–18.3, 20.x (no upstream branch/blob diff); Pascal/Maxwell still need 16.x + kernel <= 6.5 + PVE 8.
 
-**Decision:**
-- Cannot directly integrate due to version gap
-- Our `lib/vgpu-unlock.sh` module already supports vgpu_unlock
-- Maintaining patches independently provides better control and future-proofing
-- Would need to create patches for 19.2+, 20.x if vgpu_unlock support needed for those versions
-- No behavior change when Secure Boot is disabled
+**Design:**
+- New `lib/vgpu-merge.sh` module; default `lib/vgpu-unlock.sh` path untouched.
+- Upstream patcher is cloned per-branch with submodules; GNRL input is manual (licensing constraint).
 
 ---
 
@@ -192,6 +202,7 @@ To reset to auto-discovery: remove `URL` / `FILE` from `config.txt`.
 
 | Version | Host Driver | Linux Guest | Windows Guest | Notes |
 |---------|-------------|-------------|---------------|-------|
+| 20.2 | 595.91.04 | 595.91.07 | 596.86 | Kernel 7.x, native only, NOT Pascal |
 | 20.1 | 595.71.03 | 595.71.05 | 596.36 | Kernel 7.x, ZIP format |
 | 20.0 | 595.58.02 | 595.58.03 | 595.97 | Kernel 7.x ✓ |
 | 19.5 | 580.159.01 | 580.159.03 | 582.53 | ✓ |
@@ -347,6 +358,7 @@ proxmox-vgpu-installer/
 │   ├── repo-manager.sh           # Repository management (*.list & *.sources)
 │   ├── guest-drivers.sh          # Guest driver catalog
 │   ├── vgpu-unlock.sh            # vGPU unlock support
+│   ├── vgpu-merge.sh             # Merged driver builder (experimental, Issue #10)
 │   └── fastapi-dls.sh            # Licensing server
 ├── driver_patches.json           # Patch-to-driver mapping
 ├── gpu_info.db                   # GPU compatibility database
@@ -373,6 +385,7 @@ proxmox-vgpu-installer/
 - `repo-manager.sh` - APT repository configuration (*.list & *.sources)
 - `guest-drivers.sh` - Guest driver catalog & downloads
 - `vgpu-unlock.sh` - vGPU unlock setup for consumer GPUs
+- `vgpu-merge.sh` - Merged driver builder via vGPU-Unlock-Patcher (experimental)
 - `fastapi-dls.sh` - FastAPI-DLS licensing server deployment
 
 ### Module Dependencies

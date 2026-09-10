@@ -1,4 +1,4 @@
-# Proxmox vGPU Installer v1.84
+# Proxmox vGPU Installer v1.85
 
 A comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. This tool supports multiple GPU types, driver versions, and provides both native vGPU and vgpu_unlock capabilities.
 
@@ -35,6 +35,29 @@ Use the following decision rule before running the installer:
 - **If your GPU is a consumer Maxwell or Pascal card (needs `vgpu_unlock`)**: Assume you must remain on PVE 8 and pin your host kernel to `6.5.x` (automated by Step 1 of this script). PVE 8 goes EOL on August 31, 2026.
 - **If your GPU is consumer Turing (needs `vgpu_unlock`)**: You can use newer PVE versions (PVE 9+) because newer supported driver branches (vGPU 17.6+) avoid the `enable_apicv` dependency.
 - **If your GPU is consumer Ampere or newer GeForce**: This project explicitly marks unlock as unsupported.
+
+### Which Driver Branch Should I Pick? (Read This First!)
+
+The menu lists newest first, but **newest is NOT always correct for your card**. Pick by GPU generation:
+
+| Your GPU | Pick this branch (max) | NEVER pick |
+| :--- | :--- | :--- |
+| **Tesla P100 / P40 / P4 / P6** (Pascal enterprise, native) | **19.5 (580.159.01)** — Pascal's last supported branch | **20.x (595.x)**: NVIDIA dropped Pascal; install "succeeds" but `dmesg` says `supported through the NVIDIA 580.xx Legacy drivers` and `nvidia-smi` fails ([Issue #29](https://github.com/anomixer/proxmox-vgpu-installer/issues/29)) |
+| **Tesla T4 and newer** (Turing+, native) | Newest available (20.x on kernel 7.x) | — |
+| **Consumer Maxwell/Pascal** (GTX 9/10-series, unlock) | **16.x** on PVE 8 + kernel 6.5.x | Anything on PVE 9 (impossible kernel downgrade) |
+| **Consumer Turing** (RTX 20-series, GTX 16-series, unlock) | 17.6+ (default path) or merged 18.0/19.4/19.5 (option 7) | 20.x (no unlock patch) |
+
+> [!WARNING]
+> **Tesla P100 users**: your card (e.g. `10de:15f8`) is Pascal. The menu's option `1: 20.1 (595.71.03)` will install but the driver will ignore your GPU. Always choose **19.5** or older. The installer now also warns you at runtime if it detects this mismatch.
+
+### Which Menu Path Should I Use? (Read This First!)
+
+There are **two** install paths. Pick one — do not mix them:
+
+- **Standard path (most users)**: `1` (New vGPU installation, Step 1) → **reboot** → `2` (Step 2 installs the driver).
+- **Merged-driver path (experimental, [Issue #10](https://github.com/anomixer/proxmox-vgpu-installer/issues/10), needs host CUDA/OpenGL or unlock on 18.0/19.4/19.5)**: `1` (Step 1) → **reboot** → **`7` (build + install merged driver)**.
+  - Option 7 **replaces** Step 2: it already builds, installs, enables services, fetches guest drivers, and offers licensing.
+  - **Do NOT run option 2 after option 7** (or vice versa) — the second install overwrites the first driver and you end up with a conflicting stack.
 
 ## Features
 
@@ -85,11 +108,12 @@ This installer targets **x86_64 (amd64)** Proxmox VE installations exclusively. 
    ```
 
 3. **Follow the interactive menu:**
-   - Select option 1 for new vGPU installation
-   - Choose your NVIDIA driver version
-   - Complete step 1 (system preparation)
-   - Reboot when prompted
-   - Run the script again to complete step 2 (driver installation)
+    - Read [Which Driver Branch Should I Pick?](#which-driver-branch-should-i-pick-read-this-first) first — newest is not always correct (e.g. Tesla P100 must stop at 19.5).
+    - Read [Which Menu Path Should I Use?](#which-menu-path-should-i-use-read-this-first) first — standard path is `1 → reboot → 2`; merged path is `1 → reboot → 7` (never run 2 after 7).
+    - Select option 1 for new vGPU installation
+    - Complete step 1 (system preparation)
+    - Reboot when prompted
+    - Run the script again to complete step 2 (driver installation, option 2) or the merged build (option 7)
 
 4. **Verify installation:**
    ```bash
@@ -99,7 +123,18 @@ This installer targets **x86_64 (amd64)** Proxmox VE installations exclusively. 
 
 ## Version History
 
-Changes in version 1.84 (latest release)
+Changes in version 1.85 (latest release)
+- **Experimental Merged Driver Builder (Issue #10)**:
+  - New menu option 7 `Build merged driver (experimental)` backed by `lib/vgpu-merge.sh` and upstream `greglechin/vGPU-Unlock-Patcher` (fork of `benjamindoron/vGPU-Unlock-Patcher`).
+  - Supports 4 patcher branches only: `550.90` (vGPU 17.3 legacy/older kernel), `570.124` (18.0), `580.126` (19.4), `580.159` (19.5 latest). Other branches still use the default `vgpu-proxmox + vgpu_unlock-rs` path.
+  - Two targets: `vgpu-kvm` (recommended for Proxmox, no host display) and `general-merge` (host CUDA/OpenGL + vGPU, needs extra matching GNRL `.run` — the Issue #10 request).
+  - Flow: clone patcher branch `--recursive` → stage VGPU `.run` (local file or alist auto-discovery fallback) → `./patch.sh --repack <target>` → install with `--dkms -m=kernel -s` (+ Secure Boot flags) → enable services → guest drivers → FastAPI-DLS → summary.
+  - Kernel guard: warns on kernel 6.17+/7.x (merged 550~580 builds target <= 6.14; use Step 1 downgrade or native 20.x instead).
+  - Cleanup: option 3 now also offers to remove `vgpu-unlock-patcher-*` checkouts.
+  - Limitations: each host version needs its own upstream branch + blob diff; `19.0~19.3`, `18.1~18.3`, `20.x` have no merged patch. Pascal/Maxwell still require `16.x + kernel <= 6.5 + PVE 8` regardless of backend.
+- **vGPU 20.2 driver support**: host `595.91.04` (auto-discovery), Linux guest `595.91.07`, Windows guest `596.86`. Adds support for the newly released **NVIDIA RTX PRO 5000 Blackwell Workstation Edition 72 GB**. Native only.
+
+Changes in version 1.84 (previous release)
 - **Manual Override & Unregistered GPU Opt-in Support**:
   - Removed strict hard gate blocking for GPUs missing from `gpu_info.db` or marked as unsupported (`No`).
   - Added an interactive warning prompt during GPU detection, explaining PCI ID range spoofing in `vgpu_unlock` (Maxwell, Pascal, Turing, Ampere, etc.).
@@ -280,7 +315,8 @@ Changes in version 1.1 (original author wvthoog's latest release)
 ## Supported NVIDIA Driver Versions
 
 ### v20.x Series (Kernel 7.x Support)
-- **20.1**: 595.71.03 (latest, ZIP format)
+- **20.2**: 595.91.04 (latest, adds RTX PRO 5000 Blackwell Workstation Edition 72 GB)
+- **20.1**: 595.71.03 (ZIP format)
 - **20.0**: 595.58.02 (Kernel 7.x support)
 
 ### v19.x Series (Native vGPU Only)
@@ -353,6 +389,15 @@ Changes in version 1.1 (original author wvthoog's latest release)
 - Sets up Docker-based FastAPI-DLS licensing server
 - Generates license retrieval scripts for VMs
 - Configures SSL certificates and database
+
+**Option 7: Build merged driver (experimental, Issue #10)**
+- **Replaces Step 2**: run `1 → reboot → 7`. Do NOT run option 2 before or after option 7.
+- Clones `greglechin/vGPU-Unlock-Patcher` at `550.90 / 570.124 / 580.126 / 580.159`
+- Builds `vgpu-kvm` (Proxmox default) or `general-merge` (host CUDA/OpenGL + vGPU)
+- `general-merge` requires you to place the matching consumer GNRL `.run` next to the installer (e.g. `NVIDIA-Linux-x86_64-580.159.03.run`); VGPU `.run` can be auto-fetched from alist when missing
+- Installs with `--dkms -m=kernel -s` (+ Secure Boot flags), then runs the normal service/guest-driver/licensing tail
+
+**Option 8: Exit** - Exit the installer
 
 ### What to Expect During Installation
 
@@ -551,11 +596,12 @@ sudo bash proxmox-installer.sh --debug --url "https://alist.homelabproject.cc/d/
 
 1. **New vGPU installation** - Complete setup from scratch
 2. **Upgrade vGPU installation** - Upgrade existing vGPU drivers
-3. **Remove vGPU installation** - Clean removal of vGPU stack
+3. **Remove vGPU installation** - Clean removal of vGPU stack (incl. merged patcher checkouts)
 4. **Download vGPU drivers** - Download drivers without installation
 5. **Download guest drivers** - Download Linux/Windows guest drivers
 6. **License vGPU** - Setup FastAPI-DLS licensing server
-7. **Exit** - Exit the installer
+7. **Build merged driver (experimental)** - vGPU-Unlock-Patcher merged build (Issue #10)
+8. **Exit** - Exit the installer
 
 ## Database Management
 

@@ -87,6 +87,13 @@ else
     exit 1
 fi
 
+if [ -f "$SCRIPT_DIR/lib/vgpu-merge.sh" ]; then
+    source "$SCRIPT_DIR/lib/vgpu-merge.sh"
+else
+    echo "ERROR: Required library lib/vgpu-merge.sh not found"
+    exit 1
+fi
+
 if [ -f "$SCRIPT_DIR/lib/fastapi-dls.sh" ]; then
     source "$SCRIPT_DIR/lib/fastapi-dls.sh"
 else
@@ -101,7 +108,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.84
+SCRIPT_VERSION=1.85
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -158,6 +165,7 @@ load_auto_guest_driver_catalog() {
         [ -z "$branch" ] && continue
         register_guest_driver "$branch" "$linux_url" "$windows_url"
     done <<'CATALOG'
+20.2|https://alist.homelabproject.cc/d/foxipan/vGPU/20.2/NVIDIA-GRID-Linux-KVM-595.91.04-595.91.07-596.86/Guest_Drivers/NVIDIA-Linux-x86_64-595.91.07-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/20.2/NVIDIA-GRID-Linux-KVM-595.91.04-595.91.07-596.86/Guest_Drivers/596.86_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
 20.1||
 20.0|https://alist.homelabproject.cc/d/foxipan/vGPU/20.0/NVIDIA-GRID-Linux-KVM-595.58.02-595.58.03-595.97/Guest_Drivers/NVIDIA-Linux-x86_64-595.58.03-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/20.0/NVIDIA-GRID-Linux-KVM-595.58.02-595.58.03-595.97/Guest_Drivers/595.97_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
 19.5|https://alist.homelabproject.cc/d/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/NVIDIA-Linux-x86_64-580.159.03-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/582.53_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
@@ -627,6 +635,7 @@ register_driver() {
 }
 
 # Driver registry — host URL "auto" = discover on alist.homelabproject.cc (lib/host-drivers-auto.sh)
+register_driver "20.2" "20.2 (595.91.04)" "NVIDIA-Linux-x86_64-595.91.04-vgpu-kvm.run" "auto" "" "" "Native GPUs only (Kernel 7.x support)"
 register_driver "20.1" "20.1 (595.71.03)" "NVIDIA-Linux-x86_64-595.71.03-vgpu-kvm.run" "auto" "" "" "Native GPUs only (Kernel 7.x support)"
 register_driver "20.0" "20.0 (595.58.02)" "NVIDIA-Linux-x86_64-595.58.02-vgpu-kvm.run" "auto" "" "" "Native GPUs only (Kernel 7.x support)"
 register_driver "19.5" "19.5 (580.159.01)" "NVIDIA-Linux-x86_64-580.159.01-vgpu-kvm.run" "auto" "" "" "Native GPUs only"
@@ -1435,8 +1444,28 @@ perform_step_two() {
                 ;;
         esac
 
+        step1_hint="${DRIVER_VERSION:-}"
+
         if ! select_driver_branch false; then
             exit 1
+        fi
+
+        # Issue #29: NVIDIA 595.x (vGPU 20.x) dropped Pascal (e.g. Tesla P100).
+        # DRIVER_VERSION still holds the Step 1 GPU-detection hint here.
+        # The db driver column is a legacy branch list, so "max branch is 16"
+        # (contains 16 but no 17+) is the Pascal-or-older signal — this keeps
+        # Turing (17;16) / Volta (17;16;...) / Ampere cards warning-free.
+        # Non-blocking warning only (v1.84+ liberation philosophy): print and
+        # continue, never gate the install.
+        step1_max16=false
+        if [[ "$step1_hint" == *16* ]] && [[ "$step1_hint" != *17* && "$step1_hint" != *18* && "$step1_hint" != *19* && "$step1_hint" != *20* ]]; then
+            step1_max16=true
+        fi
+        if [[ "$driver_version" == 20.* ]] && [ "$step1_max16" = "true" ]; then
+            echo -e "${YELLOW}[!]${NC} Heads-up: your GPU looks Pascal-era (Step 1 hint: $step1_hint),"
+            echo -e "${YELLOW}[!]${NC} and NVIDIA 595.x dropped Pascal support — if nvidia-smi fails after install"
+            echo -e "${YELLOW}[!]${NC} with 'supported through the NVIDIA 580.xx Legacy drivers', rerun step 2"
+            echo -e "${YELLOW}[!]${NC} and pick 19.5 or older. Continuing anyway (your call, your risk)."
         fi
 
         echo -e "${YELLOW}[-]${NC} Driver version: $driver_filename"
@@ -1779,7 +1808,8 @@ case $STEP in
     echo "4) Download vGPU drivers"
     echo "5) Download guest drivers"
     echo "6) License vGPU"
-    echo "7) Exit"
+    echo "7) Build merged driver (experimental, Issue #10)"
+    echo "8) Exit"
     echo ""
     read -r -p "Enter your choice: " choice
     choice=$(strip_trailing_carriage_return "$choice")
@@ -2340,6 +2370,11 @@ case $STEP in
                 run_command "Removing vgpu-proxmox" "notification" "rm -rf $VGPU_DIR/vgpu-proxmox"
             fi
 
+            # Removing merged patcher checkouts (v1.85+, Issue #10)
+            if confirm_action "Do you want to remove merged patcher checkouts (vgpu-unlock-patcher-*)?"; then
+                run_command "Removing merged patcher" "notification" "rm -rf $VGPU_DIR/vgpu-unlock-patcher-*"
+            fi
+
             # Removing FastAPI-DLS
             if confirm_action "Do you want to remove vGPU licensing?"; then
                 if command -v docker >/dev/null 2>&1; then
@@ -2464,12 +2499,24 @@ case $STEP in
             ;;
         7)
             echo ""
+            echo "Experimental merged driver builder (vGPU-Unlock-Patcher, Issue #10)"
+            echo ""
+
+            if ! build_merged_driver_interactive; then
+                echo -e "${RED}[!]${NC} Merged driver build/install failed. See messages above and $LOG_FILE."
+                exit 1
+            fi
+
+            exit 0
+            ;;
+        8)
+            echo ""
             echo "Exiting script."
             exit 0
             ;;
         *)
             echo ""
-            echo "Invalid choice. Please enter 1, 2, 3, 4, 5, 6 or 7."
+            echo "Invalid choice. Please enter 1, 2, 3, 4, 5, 6, 7 or 8."
             echo ;;
     esac
     ;;
