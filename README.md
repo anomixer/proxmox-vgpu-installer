@@ -140,7 +140,7 @@ Changes in version 1.84 (previous release)
   - Added an interactive warning prompt during GPU detection, explaining PCI ID range spoofing in `vgpu_unlock` (Maxwell, Pascal, Turing, Ampere, etc.).
   - Users can now opt-in (`y/n`) to force enable `vgpu_unlock` mode at their own risk even if the card is not registered in the database.
 
-Changes in version 1.83 (previous release)
+Changes in version 1.83
 - **vGPU Unlock Database Update & Warning Disclaimer**:
   - Updated the compatibility database `gpu_info.db` to mark all Maxwell, Pascal, Volta, and Turing GPUs previously labeled as `No` (non-capable) as `Yes` (vGPU Unlock Capable), unlocking virtual GPU capabilities for these architecture generations.
   - Added a prominent warning message in the installation flow (Step 1 and Step 2 detection/selection) for vGPU Unlock Capable cards, prompting users to use the tool at their own risk and provide feedback.
@@ -211,7 +211,7 @@ Changes in version 1.8
 - **MOK Password Policy Reminder**: A clear reminder of the MOK password requirements (minimum 8 characters, ASCII only, avoid special characters like `@`, `#`, `$` that may not type correctly in UEFI) is now shown before the password prompt.
 - **Secure Boot Module Signing Fix (Critical)**: Fixed a critical bug where NVIDIA kernel modules were compiled without Secure Boot signing flags even after successful MOK enrollment, causing `ERROR: The kernel module failed to load`. The in-memory `SECURE_BOOT_READY` variable was not updated after the enrollment check, so signing flags were never passed to the NVIDIA installer.
 
-Changes in version 1.75 (previous release)
+Changes in version 1.75
 - **Kernel Compatibility Management**: Automatic kernel downgrade for vGPU unlock compatibility
   - Detects when running Proxmox VE 9.1.1+ with kernel 6.17 or higher
   - Automatically downgrades and pins to the latest available kernel `6.14.11-x-pve` (e.g. `6.14.11-9-pve`) for vGPU patch compatibility
