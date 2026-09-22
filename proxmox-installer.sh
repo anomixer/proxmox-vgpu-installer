@@ -165,42 +165,42 @@ load_auto_guest_driver_catalog() {
         [ -z "$branch" ] && continue
         register_guest_driver "$branch" "$linux_url" "$windows_url"
     done <<'CATALOG'
-20.2|https://alist.homelabproject.cc/d/foxipan/vGPU/20.2/NVIDIA-GRID-Linux-KVM-595.91.04-595.91.07-596.86/Guest_Drivers/NVIDIA-Linux-x86_64-595.91.07-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/20.2/NVIDIA-GRID-Linux-KVM-595.91.04-595.91.07-596.86/Guest_Drivers/596.86_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
+20.2|https://alist.homelabproject.cc/p/foxipan/vGPU/20.2/NVIDIA-GRID-Linux-KVM-595.91.04-595.91.07-596.86/Guest_Drivers/NVIDIA-Linux-x86_64-595.91.07-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/20.2/NVIDIA-GRID-Linux-KVM-595.91.04-595.91.07-596.86/Guest_Drivers/596.86_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
 20.1||
-20.0|https://alist.homelabproject.cc/d/foxipan/vGPU/20.0/NVIDIA-GRID-Linux-KVM-595.58.02-595.58.03-595.97/Guest_Drivers/NVIDIA-Linux-x86_64-595.58.03-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/20.0/NVIDIA-GRID-Linux-KVM-595.58.02-595.58.03-595.97/Guest_Drivers/595.97_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
-19.5|https://alist.homelabproject.cc/d/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/NVIDIA-Linux-x86_64-580.159.03-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/582.53_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
-19.4|https://alist.homelabproject.cc/d/foxipan/vGPU/19.4/NVIDIA-GRID-Linux-KVM-580.126.08-580.126.09-582.16/Guest_Drivers/NVIDIA-Linux-x86_64-580.126.09-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/19.4/NVIDIA-GRID-Linux-KVM-580.126.08-580.126.09-582.16/Guest_Drivers/582.16_grid_win10_win11_server2022_server2025_dch_64bit_international.exe
-19.3|https://alist.homelabproject.cc/d/foxipan/vGPU/19.3/NVIDIA-GRID-Linux-KVM-580.105.06-580.105.08-581.80/Guest_Drivers/NVIDIA-Linux-x86_64-580.105.08-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/19.3/NVIDIA-GRID-Linux-KVM-580.105.06-580.105.08-581.80/Guest_Drivers/581.80_grid_win10_win11_server2022_server2025_dch_64bit_international.exe
-19.2|https://alist.homelabproject.cc/d/foxipan/vGPU/19.2/NVIDIA-GRID-Linux-KVM-580.95.02-580.95.05-581.42/Guest_Drivers/NVIDIA-Linux-x86_64-580.95.05-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/19.2/NVIDIA-GRID-Linux-KVM-580.95.02-580.95.05-581.42/Guest_Drivers/581.42_grid_win10_win11_server2019_server2022_server2025_dch_64bit_international.exe
-19.1|https://alist.homelabproject.cc/d/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Guest_Drivers/NVIDIA-Linux-x86_64-580.82.07-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Guest_Drivers/581.15_grid_win10_win11_server2022_dch_64bit_international.exe
-19.0|https://alist.homelabproject.cc/d/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Guest_Drivers/NVIDIA-Linux-x86_64-580.65.06-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Guest_Drivers/580.88_grid_win10_win11_server2022_dch_64bit_international.exe
-18.4|https://alist.homelabproject.cc/d/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Guest_Drivers/NVIDIA-Linux-x86_64-570.172.08-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Guest_Drivers/573.48_grid_win10_win11_server2022_dch_64bit_international.exe
-18.3|https://alist.homelabproject.cc/d/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Guest_Drivers/NVIDIA-Linux-x86_64-570.158.01-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Guest_Drivers/573.39_grid_win10_win11_server2022_dch_64bit_international.exe
-18.2|https://alist.homelabproject.cc/d/foxipan/vGPU/18.2/NVIDIA-GRID-Linux-KVM-570.148.06-570.148.08-573.07/Guest_Drivers/NVIDIA-Linux-x86_64-570.148.08-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/18.2/NVIDIA-GRID-Linux-KVM-570.148.06-570.148.08-573.07/Guest_Drivers/573.07_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+20.0|https://alist.homelabproject.cc/p/foxipan/vGPU/20.0/NVIDIA-GRID-Linux-KVM-595.58.02-595.58.03-595.97/Guest_Drivers/NVIDIA-Linux-x86_64-595.58.03-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/20.0/NVIDIA-GRID-Linux-KVM-595.58.02-595.58.03-595.97/Guest_Drivers/595.97_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
+19.5|https://alist.homelabproject.cc/p/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/NVIDIA-Linux-x86_64-580.159.03-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/582.53_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe
+19.4|https://alist.homelabproject.cc/p/foxipan/vGPU/19.4/NVIDIA-GRID-Linux-KVM-580.126.08-580.126.09-582.16/Guest_Drivers/NVIDIA-Linux-x86_64-580.126.09-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/19.4/NVIDIA-GRID-Linux-KVM-580.126.08-580.126.09-582.16/Guest_Drivers/582.16_grid_win10_win11_server2022_server2025_dch_64bit_international.exe
+19.3|https://alist.homelabproject.cc/p/foxipan/vGPU/19.3/NVIDIA-GRID-Linux-KVM-580.105.06-580.105.08-581.80/Guest_Drivers/NVIDIA-Linux-x86_64-580.105.08-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/19.3/NVIDIA-GRID-Linux-KVM-580.105.06-580.105.08-581.80/Guest_Drivers/581.80_grid_win10_win11_server2022_server2025_dch_64bit_international.exe
+19.2|https://alist.homelabproject.cc/p/foxipan/vGPU/19.2/NVIDIA-GRID-Linux-KVM-580.95.02-580.95.05-581.42/Guest_Drivers/NVIDIA-Linux-x86_64-580.95.05-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/19.2/NVIDIA-GRID-Linux-KVM-580.95.02-580.95.05-581.42/Guest_Drivers/581.42_grid_win10_win11_server2019_server2022_server2025_dch_64bit_international.exe
+19.1|https://alist.homelabproject.cc/p/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Guest_Drivers/NVIDIA-Linux-x86_64-580.82.07-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/19.1/NVIDIA-GRID-Linux-KVM-580.82.02-580.82.07-581.15/Guest_Drivers/581.15_grid_win10_win11_server2022_dch_64bit_international.exe
+19.0|https://alist.homelabproject.cc/p/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Guest_Drivers/NVIDIA-Linux-x86_64-580.65.06-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/19.0/NVIDIA-GRID-Linux-KVM-580.65.05-580.65.06-580.88/Guest_Drivers/580.88_grid_win10_win11_server2022_dch_64bit_international.exe
+18.4|https://alist.homelabproject.cc/p/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Guest_Drivers/NVIDIA-Linux-x86_64-570.172.08-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/18.4/NVIDIA-GRID-Linux-KVM-570.172.07-570.172.08-573.48/Guest_Drivers/573.48_grid_win10_win11_server2022_dch_64bit_international.exe
+18.3|https://alist.homelabproject.cc/p/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Guest_Drivers/NVIDIA-Linux-x86_64-570.158.01-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/18.3/NVIDIA-GRID-Linux-KVM-570.158.02-570.158.01-573.39/Guest_Drivers/573.39_grid_win10_win11_server2022_dch_64bit_international.exe
+18.2|https://alist.homelabproject.cc/p/foxipan/vGPU/18.2/NVIDIA-GRID-Linux-KVM-570.148.06-570.148.08-573.07/Guest_Drivers/NVIDIA-Linux-x86_64-570.148.08-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/18.2/NVIDIA-GRID-Linux-KVM-570.148.06-570.148.08-573.07/Guest_Drivers/573.07_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
 18.1||
 18.0||
-17.6|https://alist.homelabproject.cc/d/foxipan/vGPU/17.6/NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74/Guest_Drivers/NVIDIA-Linux-x86_64-550.163.01-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/17.6/NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74/Guest_Drivers/553.74_grid_win10_win11_server2022_dch_64bit_international.exe
-17.5||https://alist.homelabproject.cc/d/foxipan/vGPU/17.5/NVIDIA-GRID-Linux-KVM-550.144.02-550.144.03-553.62/Guest_Drivers/553.62_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+17.6|https://alist.homelabproject.cc/p/foxipan/vGPU/17.6/NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74/Guest_Drivers/NVIDIA-Linux-x86_64-550.163.01-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/17.6/NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74/Guest_Drivers/553.74_grid_win10_win11_server2022_dch_64bit_international.exe
+17.5||https://alist.homelabproject.cc/p/foxipan/vGPU/17.5/NVIDIA-GRID-Linux-KVM-550.144.02-550.144.03-553.62/Guest_Drivers/553.62_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
 17.4||
 17.3||
-17.2|https://alist.homelabproject.cc/d/foxipan/vGPU/17.2/NVIDIA-GRID-Linux-KVM-550.90.05-550.90.07-552.55/Guest_Drivers/NVIDIA-Linux-x86_64-550.90.07-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/17.2/NVIDIA-GRID-Linux-KVM-550.90.05-550.90.07-552.55/Guest_Drivers/552.55_grid_win10_win11_server2022_dch_64bit_international.exe
+17.2|https://alist.homelabproject.cc/p/foxipan/vGPU/17.2/NVIDIA-GRID-Linux-KVM-550.90.05-550.90.07-552.55/Guest_Drivers/NVIDIA-Linux-x86_64-550.90.07-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/17.2/NVIDIA-GRID-Linux-KVM-550.90.05-550.90.07-552.55/Guest_Drivers/552.55_grid_win10_win11_server2022_dch_64bit_international.exe
 17.1||
 17.0||
-16.14|https://alist.homelabproject.cc/d/foxipan/vGPU/16.14/NVIDIA-GRID-Linux-KVM-535.309.01-539.72/Guest_Drivers/NVIDIA-Linux-x86_64-535.309.01-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.14/NVIDIA-GRID-Linux-KVM-535.309.01-539.72/Guest_Drivers/539.72_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.14|https://alist.homelabproject.cc/p/foxipan/vGPU/16.14/NVIDIA-GRID-Linux-KVM-535.309.01-539.72/Guest_Drivers/NVIDIA-Linux-x86_64-535.309.01-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.14/NVIDIA-GRID-Linux-KVM-535.309.01-539.72/Guest_Drivers/539.72_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
 16.13||
 16.12||
-16.11|https://alist.homelabproject.cc/d/foxipan/vGPU/16.11/NVIDIA-GRID-Linux-KVM-535.261.04-535.261.03-539.41/Guest_Drivers/NVIDIA-Linux-x86_64-535.261.03-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.11/NVIDIA-GRID-Linux-KVM-535.261.04-535.261.03-539.41/Guest_Drivers/539.41_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.10|https://alist.homelabproject.cc/d/foxipan/vGPU/16.10/NVIDIA-GRID-Linux-KVM-535.247.02-535.247.01-539.28/Guest_Drivers/NVIDIA-Linux-x86_64-535.247.01-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.10/NVIDIA-GRID-Linux-KVM-535.247.02-535.247.01-539.28/Guest_Drivers/539.28_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.9|https://alist.homelabproject.cc/d/foxipan/vGPU/16.9/NVIDIA-GRID-Linux-KVM-535.230.02-539.19/Guest_Drivers/NVIDIA-Linux-x86_64-535.230.02-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.9/NVIDIA-GRID-Linux-KVM-535.230.02-539.19/Guest_Drivers/539.19_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.8|https://alist.homelabproject.cc/d/foxipan/vGPU/16.8/NVIDIA-GRID-Linux-KVM-535.216.01-538.95/Guest_Drivers/NVIDIA-Linux-x86_64-535.216.01-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.8/NVIDIA-GRID-Linux-KVM-535.216.01-538.95/Guest_Drivers/538.95_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.7|https://alist.homelabproject.cc/d/foxipan/vGPU/16.7/NVIDIA-GRID-Linux-KVM-535.183.04-535.183.06-538.78/Guest_Drivers/NVIDIA-Linux-x86_64-535.183.06-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.7/NVIDIA-GRID-Linux-KVM-535.183.04-535.183.06-538.78/Guest_Drivers/538.78_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.6|https://alist.homelabproject.cc/d/foxipan/vGPU/16.6/NVIDIA-GRID-Linux-KVM-535.183.04-535.183.01-538.67/Guest_Drivers/NVIDIA-Linux-x86_64-535.183.01-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.6/NVIDIA-GRID-Linux-KVM-535.183.04-535.183.01-538.67/Guest_Drivers/538.67_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.5|https://alist.homelabproject.cc/d/foxipan/vGPU/16.5/NVIDIA-GRID-Linux-KVM-535.161.05-535.161.08-538.46/Guest_Drivers/NVIDIA-Linux-x86_64-535.161.08-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.5/NVIDIA-GRID-Linux-KVM-535.161.05-535.161.08-538.46/Guest_Drivers/538.46_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.4|https://alist.homelabproject.cc/d/foxipan/vGPU/16.4/NVIDIA-GRID-Linux-KVM-535.161.05-535.161.07-538.33/Guest_Drivers/NVIDIA-Linux-x86_64-535.161.07-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.4/NVIDIA-GRID-Linux-KVM-535.161.05-535.161.07-538.33/Guest_Drivers/538.33_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.3|https://alist.homelabproject.cc/d/foxipan/vGPU/16.3/NVIDIA-GRID-Linux-KVM-535.154.02-535.154.05-538.15/Guest_Drivers/NVIDIA-Linux-x86_64-535.154.05-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.3/NVIDIA-GRID-Linux-KVM-535.154.02-535.154.05-538.15/Guest_Drivers/538.15_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.2|https://alist.homelabproject.cc/d/foxipan/vGPU/16.2/NVIDIA-GRID-Linux-KVM-535.129.03-537.70/Guest_Drivers/NVIDIA-Linux-x86_64-535.129.03-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.2/NVIDIA-GRID-Linux-KVM-535.129.03-537.70/Guest_Drivers/537.70_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.1|https://alist.homelabproject.cc/d/foxipan/vGPU/16.1/NVIDIA-GRID-Linux-KVM-535.104.06-535.104.05-537.13/Guest_Drivers/NVIDIA-Linux-x86_64-535.104.05-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.1/NVIDIA-GRID-Linux-KVM-535.104.06-535.104.05-537.13/Guest_Drivers/537.13_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
-16.0|https://alist.homelabproject.cc/d/foxipan/vGPU/16.0/NVIDIA-GRID-Linux-KVM-535.54.06-535.54.03-536.25/Guest_Drivers/NVIDIA-Linux-x86_64-535.54.03-grid.run|https://alist.homelabproject.cc/d/foxipan/vGPU/16.0/NVIDIA-GRID-Linux-KVM-535.54.06-535.54.03-536.25/Guest_Drivers/536.25_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.11|https://alist.homelabproject.cc/p/foxipan/vGPU/16.11/NVIDIA-GRID-Linux-KVM-535.261.04-535.261.03-539.41/Guest_Drivers/NVIDIA-Linux-x86_64-535.261.03-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.11/NVIDIA-GRID-Linux-KVM-535.261.04-535.261.03-539.41/Guest_Drivers/539.41_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.10|https://alist.homelabproject.cc/p/foxipan/vGPU/16.10/NVIDIA-GRID-Linux-KVM-535.247.02-535.247.01-539.28/Guest_Drivers/NVIDIA-Linux-x86_64-535.247.01-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.10/NVIDIA-GRID-Linux-KVM-535.247.02-535.247.01-539.28/Guest_Drivers/539.28_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.9|https://alist.homelabproject.cc/p/foxipan/vGPU/16.9/NVIDIA-GRID-Linux-KVM-535.230.02-539.19/Guest_Drivers/NVIDIA-Linux-x86_64-535.230.02-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.9/NVIDIA-GRID-Linux-KVM-535.230.02-539.19/Guest_Drivers/539.19_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.8|https://alist.homelabproject.cc/p/foxipan/vGPU/16.8/NVIDIA-GRID-Linux-KVM-535.216.01-538.95/Guest_Drivers/NVIDIA-Linux-x86_64-535.216.01-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.8/NVIDIA-GRID-Linux-KVM-535.216.01-538.95/Guest_Drivers/538.95_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.7|https://alist.homelabproject.cc/p/foxipan/vGPU/16.7/NVIDIA-GRID-Linux-KVM-535.183.04-535.183.06-538.78/Guest_Drivers/NVIDIA-Linux-x86_64-535.183.06-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.7/NVIDIA-GRID-Linux-KVM-535.183.04-535.183.06-538.78/Guest_Drivers/538.78_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.6|https://alist.homelabproject.cc/p/foxipan/vGPU/16.6/NVIDIA-GRID-Linux-KVM-535.183.04-535.183.01-538.67/Guest_Drivers/NVIDIA-Linux-x86_64-535.183.01-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.6/NVIDIA-GRID-Linux-KVM-535.183.04-535.183.01-538.67/Guest_Drivers/538.67_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.5|https://alist.homelabproject.cc/p/foxipan/vGPU/16.5/NVIDIA-GRID-Linux-KVM-535.161.05-535.161.08-538.46/Guest_Drivers/NVIDIA-Linux-x86_64-535.161.08-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.5/NVIDIA-GRID-Linux-KVM-535.161.05-535.161.08-538.46/Guest_Drivers/538.46_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.4|https://alist.homelabproject.cc/p/foxipan/vGPU/16.4/NVIDIA-GRID-Linux-KVM-535.161.05-535.161.07-538.33/Guest_Drivers/NVIDIA-Linux-x86_64-535.161.07-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.4/NVIDIA-GRID-Linux-KVM-535.161.05-535.161.07-538.33/Guest_Drivers/538.33_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.3|https://alist.homelabproject.cc/p/foxipan/vGPU/16.3/NVIDIA-GRID-Linux-KVM-535.154.02-535.154.05-538.15/Guest_Drivers/NVIDIA-Linux-x86_64-535.154.05-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.3/NVIDIA-GRID-Linux-KVM-535.154.02-535.154.05-538.15/Guest_Drivers/538.15_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.2|https://alist.homelabproject.cc/p/foxipan/vGPU/16.2/NVIDIA-GRID-Linux-KVM-535.129.03-537.70/Guest_Drivers/NVIDIA-Linux-x86_64-535.129.03-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.2/NVIDIA-GRID-Linux-KVM-535.129.03-537.70/Guest_Drivers/537.70_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.1|https://alist.homelabproject.cc/p/foxipan/vGPU/16.1/NVIDIA-GRID-Linux-KVM-535.104.06-535.104.05-537.13/Guest_Drivers/NVIDIA-Linux-x86_64-535.104.05-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.1/NVIDIA-GRID-Linux-KVM-535.104.06-535.104.05-537.13/Guest_Drivers/537.13_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
+16.0|https://alist.homelabproject.cc/p/foxipan/vGPU/16.0/NVIDIA-GRID-Linux-KVM-535.54.06-535.54.03-536.25/Guest_Drivers/NVIDIA-Linux-x86_64-535.54.03-grid.run|https://alist.homelabproject.cc/p/foxipan/vGPU/16.0/NVIDIA-GRID-Linux-KVM-535.54.06-535.54.03-536.25/Guest_Drivers/536.25_grid_win10_win11_server2019_server2022_dch_64bit_international.exe
 CATALOG
 }
 
@@ -328,11 +328,23 @@ download_guest_driver_asset() {
 
     if command -v wget >/dev/null 2>&1; then
         if wget -O "$target" "$url"; then
+            if host_driver_is_html "$target"; then
+                rm -f "$target"
+                echo -e "${RED}[!]${NC} Download returned an HTML page (CrowdSec/security challenge), not ${display_name:-guest driver}."
+                print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
+                return 1
+            fi
             echo -e "${GREEN}[+]${NC} Saved to $target"
             return 0
         fi
     elif command -v curl >/dev/null 2>&1; then
         if curl -fSL "$url" -o "$target"; then
+            if host_driver_is_html "$target"; then
+                rm -f "$target"
+                echo -e "${RED}[!]${NC} Download returned an HTML page (CrowdSec/security challenge), not ${display_name:-guest driver}."
+                print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
+                return 1
+            fi
             echo -e "${GREEN}[+]${NC} Saved to $target"
             return 0
         fi
@@ -342,6 +354,7 @@ download_guest_driver_asset() {
     fi
 
     echo -e "${RED}[!]${NC} Failed to download ${display_name:-guest driver} from $url"
+    print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
     rm -f "$target"
     return 1
 }
@@ -1518,6 +1531,11 @@ perform_step_two() {
     if [ ! -f "$driver_filename" ] && [ -f "$custom_filename" ]; then
         driver_filename="$custom_filename"
         echo -e "${GREEN}[+]${NC} Pre-patched driver detected: using $driver_filename"
+    fi
+
+    if ! validate_host_driver_file "$driver_filename"; then
+        echo -e "${YELLOW}[-]${NC} Driver installation stopped before patching. Remove the invalid file and provide a real .run driver with --file or a working direct link with --url."
+        exit 1
     fi
 
     # Make driver executable

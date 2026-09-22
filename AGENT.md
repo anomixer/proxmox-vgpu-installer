@@ -50,6 +50,12 @@ This repository contains a comprehensive Bash script that automates the installa
 - **Scope**: default unlock path (options 1-2, `vgpu-proxmox` + `vgpu_unlock-rs`, `driver_patches.json` 16.x–17.6) is unchanged.
 - **Menu flow**: merged path is `1 → reboot → 7` (option 7 replaces Step 2; never run option 2 after 7). README documents the driver-branch picker (Pascal caps at 19.x, Issue #29) and the two paths.
 
+### v1.85 Alist Download URLs and HTML Validation
+- Alist `/d/` URLs open the share page; use `/p/` for the actual file download. `lib/host-drivers-auto.sh` builds discovered host-driver URLs with `_ALIST_DL_BASE=/p/foxipan/vGPU`; guest-driver catalog URLs in `proxmox-installer.sh` also use `/p/`.
+- `validate_host_driver_file` rejects HTML responses (including CrowdSec challenge pages) before patching or installation. Newly downloaded invalid host-driver files are removed; invalid existing/local files stop Step 2 before `chmod` or patch execution.
+- If the mirror challenges command-line downloads, do not treat a successful HTTP 200 as a valid driver. The installer does **not** automate or bypass the browser challenge; instead `print_manual_download_guidance` prints step-by-step guidance: it recommends the single full-package branch ZIP for host drivers (via `_find_branch_zip_url`, e.g. `NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74.zip`) or the single file for pre-patched `*-custom.run` and guest drivers, then prints the exact `scp <file> <user>@<pve-ip>:<dir>/` command to copy it back to the Proxmox host.
+- `install_host_driver_download` auto-extracts a manually-placed `NVIDIA-GRID-Linux-KVM-*.zip` when the expected `.run` is missing (non-`-custom.run`), so the manual-download + SCP flow picks up on re-run. Guest-driver downloads (`download_guest_driver_asset` in both `proxmox-installer.sh` and `lib/guest-drivers.sh`) also detect an HTML response and print the same guidance.
+
 ### Issue #29 Note (Pascal + 20.x)
 - `perform_step_two` captures the Step 1 `DRIVER_VERSION` hint before the driver menu; if the user picks `20.x` while the hint's max branch is 16 (contains `16` but no `17+`), the installer prints a **non-blocking warning only** and continues — no gate, per the v1.84+ liberation philosophy.
 - The `17;16`-style hints (Turing/Volta, e.g. T4/2080Ti/V100) intentionally do NOT trigger.
@@ -83,6 +89,7 @@ This repository contains a comprehensive Bash script that automates the installa
 **Feature**: Host drivers auto-discovered from alist.homelabproject.cc
 - **v1.8 registry**: all menu branches `16.0`–`20.1` use `register_driver … "auto"` (no Mega.nz / hard-coded alist URLs)
 - Crawls vGPU directory for available versions via API (`/api/fs/list?path=/foxipan/vGPU/{branch}`)
+- Builds actual download URLs under `/p/` (not the `/d/` share-page route)
 - Search order: root `*.run` → `Host_Drivers/` → `NVIDIA-GRID-Linux-KVM-*/Host_Drivers/` (dirs only, not `.zip` names) → root `*.zip` (`|zip` suffix for extractor)
 - No MD5 checks needed - completely future-proof
 - Smart caching: skips re-download if file already exists and is valid
@@ -99,10 +106,10 @@ This repository contains a comprehensive Bash script that automates the installa
 
 ```text
 # .run (nested Host_Drivers)
-https://alist.homelabproject.cc/d/foxipan/vGPU/16.9/NVIDIA-GRID-Linux-KVM-535.230.02-539.19/Host_Drivers/NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run
+https://alist.homelabproject.cc/p/foxipan/vGPU/16.9/NVIDIA-GRID-Linux-KVM-535.230.02-539.19/Host_Drivers/NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run
 
 # .zip (ZIP-only branch)
-https://alist.homelabproject.cc/d/foxipan/vGPU/16.13/NVIDIA-GRID-Linux-KVM-535.288.01-539.64.zip
+https://alist.homelabproject.cc/p/foxipan/vGPU/16.13/NVIDIA-GRID-Linux-KVM-535.288.01-539.64.zip
 ```
 
 To reset to auto-discovery: remove `URL` / `FILE` from `config.txt`.
@@ -262,12 +269,12 @@ Guest drivers are resolved via direct download URLs hosted on `alist.homelabproj
 
 **URL Structure**:
 ```text
-https://alist.homelabproject.cc/d/foxipan/vGPU/{BRANCH}/{KVM_FOLDER}/Guest_Drivers/{FILENAME}
+https://alist.homelabproject.cc/p/foxipan/vGPU/{BRANCH}/{KVM_FOLDER}/Guest_Drivers/{FILENAME}
 ```
 
 **Example (vGPU 19.5)**:
-- Linux: `https://alist.homelabproject.cc/d/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/NVIDIA-Linux-x86_64-580.159.03-grid.run`
-- Windows: `https://alist.homelabproject.cc/d/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/582.53_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe`
+- Linux: `https://alist.homelabproject.cc/p/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/NVIDIA-Linux-x86_64-580.159.03-grid.run`
+- Windows: `https://alist.homelabproject.cc/p/foxipan/vGPU/19.5/NVIDIA-GRID-Linux-KVM-580.159.01-580.159.03-582.53/Guest_Drivers/582.53_grid_win10_win11_server2022_server_2025_dch_64bit_international.exe`
 
 **Local ZIP Fallback (e.g., vGPU 20.1)**:
 For branches that do not have direct folders under the vGPU directory on Alist, the URLs are left blank in the static catalog. In this case, the installer automatically:
@@ -319,7 +326,7 @@ sudo bash proxmox-installer.sh
 sudo bash proxmox-installer.sh --debug
 
 # Manual host driver URL (skips menu + auto-discovery; saved to config.txt)
-sudo bash proxmox-installer.sh --url "https://alist.homelabproject.cc/d/foxipan/vGPU/17.5/NVIDIA-GRID-Linux-KVM-550.144.02-550.144.03-553.62/Host_Drivers/NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run"
+sudo bash proxmox-installer.sh --url "https://alist.homelabproject.cc/p/foxipan/vGPU/17.5/NVIDIA-GRID-Linux-KVM-550.144.02-550.144.03-553.62/Host_Drivers/NVIDIA-Linux-x86_64-550.144.02-vgpu-kvm.run"
 
 # Local .run already downloaded (offline / Mega via megadl)
 sudo bash proxmox-installer.sh --file NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run

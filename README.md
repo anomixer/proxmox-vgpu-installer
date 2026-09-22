@@ -124,6 +124,7 @@ This installer targets **x86_64 (amd64)** Proxmox VE installations exclusively. 
 ## Version History
 
 Changes in version 1.85 (latest release)
+- **Alist download URL and HTML response handling**: Host auto-discovery now uses Alist's `/p/` file-download route instead of the `/d/` share-page route. Guest-driver catalog URLs and manual URL examples use `/p/` as well. Before patching or installing, the installer checks driver files for HTML pages such as CrowdSec challenges; invalid freshly downloaded files are removed and installation stops with a clear message. If command-line downloads are challenged, the installer now prints step-by-step guidance: it recommends the single full-package branch ZIP (e.g. `NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74.zip`) or the single file for pre-patched `*-custom.run` and guest drivers, prints the exact `scp` command to copy the file back to the Proxmox host, and auto-extracts a manually-placed ZIP on re-run.
 - **Experimental Merged Driver Builder (Issue #10)**:
   - New menu option 7 `Build merged driver (experimental)` backed by `lib/vgpu-merge.sh` and upstream `greglechin/vGPU-Unlock-Patcher` (fork of `benjamindoron/vGPU-Unlock-Patcher`).
   - Supports 4 patcher branches only: `550.90` (vGPU 17.3 legacy/older kernel), `570.124` (18.0), `580.126` (19.4), `580.159` (19.5 latest). Other branches still use the default `vgpu-proxmox + vgpu_unlock-rs` path.
@@ -551,11 +552,11 @@ cd /path/to/proxmox-vgpu-installer
 
 # Nested Host_Drivers layout (typical for 16.9, 17.5, 19.x)
 sudo bash proxmox-installer.sh --url \
-  "https://alist.homelabproject.cc/d/foxipan/vGPU/16.9/NVIDIA-GRID-Linux-KVM-535.230.02-539.19/Host_Drivers/NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run"
+  "https://alist.homelabproject.cc/p/foxipan/vGPU/16.9/NVIDIA-GRID-Linux-KVM-535.230.02-539.19/Host_Drivers/NVIDIA-Linux-x86_64-535.230.02-vgpu-kvm.run"
 
 # ZIP-only layout (e.g. 16.13, 20.1) — script unzips and picks the .run inside
 sudo bash proxmox-installer.sh --url \
-  "https://alist.homelabproject.cc/d/foxipan/vGPU/16.13/NVIDIA-GRID-Linux-KVM-535.288.01-539.64.zip"
+  "https://alist.homelabproject.cc/p/foxipan/vGPU/16.13/NVIDIA-GRID-Linux-KVM-535.288.01-539.64.zip"
 
 # Resume step 2 after step 1 + reboot (URL kept in config.txt)
 sudo bash proxmox-installer.sh --step 2
@@ -565,7 +566,9 @@ sudo bash proxmox-installer.sh --step 2
 
 1. Open `https://alist.homelabproject.cc/foxipan/vGPU/<branch>/` (e.g. `16.9`, `17.5`).  
 2. Browse to `NVIDIA-GRID-Linux-KVM-…/Host_Drivers/` and copy the download link for `NVIDIA-Linux-x86_64-*-vgpu-kvm.run`, **or** copy the `.zip` link if only ZIP is offered.  
-3. The link must start with `https://alist.homelabproject.cc/d/foxipan/vGPU/…` (the `/d/` path is the direct download endpoint).
+3. Use the actual download URL starting with `https://alist.homelabproject.cc/p/foxipan/vGPU/`. The copied `/d/` URL opens the share page; use the `/p/` URL exposed when the download starts.
+
+**HTML/challenge response**: Some mirrors may return an HTML security challenge (e.g. CrowdSec) with HTTP 200 instead of the driver. The installer detects this and stops before applying the patch, then prints step-by-step guidance: it tells you to download the file in a browser (recommending the single full-package ZIP for host drivers, e.g. `NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74.zip`), and prints the exact `scp` command to copy it back to this Proxmox host. After copying, re-run the installer; it detects the file (and auto-extracts a ZIP) and continues. If you prefer, you can also download manually and use `--file`.
 
 **Other mirrors**
 
@@ -587,7 +590,7 @@ Use this for offline installs, Mega.nz files saved via `megadl`, or when you do 
 
 ```bash
 # Debug + custom URL + start at step 2
-sudo bash proxmox-installer.sh --debug --url "https://alist.homelabproject.cc/d/foxipan/vGPU/19.5/..." --step 2
+sudo bash proxmox-installer.sh --debug --url "https://alist.homelabproject.cc/p/foxipan/vGPU/19.5/..." --step 2
 ```
 
 **Clearing a saved URL**: remove the `URL=` or `FILE=` line from `config.txt`, or delete `config.txt`, then run the script normally to use auto-discovery again.

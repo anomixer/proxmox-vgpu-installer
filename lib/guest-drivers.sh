@@ -118,11 +118,23 @@ download_guest_driver_asset() {
     # Try curl first, then wget
     if command -v curl >/dev/null 2>&1; then
         if curl -fSL "$url" -o "$target"; then
+            if host_driver_is_html "$target"; then
+                rm -f "$target"
+                log_error "Download returned an HTML page (CrowdSec/security challenge), not ${display_name:-guest driver}."
+                print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
+                return 1
+            fi
             log_info "Saved to $target"
             return 0
         fi
     elif command -v wget >/dev/null 2>&1; then
         if wget -O "$target" "$url"; then
+            if host_driver_is_html "$target"; then
+                rm -f "$target"
+                log_error "Download returned an HTML page (CrowdSec/security challenge), not ${display_name:-guest driver}."
+                print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
+                return 1
+            fi
             log_info "Saved to $target"
             return 0
         fi
@@ -132,6 +144,7 @@ download_guest_driver_asset() {
     fi
 
     log_error "Failed to download ${display_name:-guest driver} from $url"
+    print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
     rm -f "$target"
     return 1
 }
