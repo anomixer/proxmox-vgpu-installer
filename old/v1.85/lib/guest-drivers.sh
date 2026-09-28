@@ -121,9 +121,6 @@ download_guest_driver_asset() {
             if host_driver_is_html "$target"; then
                 rm -f "$target"
                 log_error "Download returned an HTML page (CrowdSec/security challenge), not ${display_name:-guest driver}."
-                if prompt_lxc_browser_download "$url" "$target" "${display_name:-guest driver}"; then
-                    return 0
-                fi
                 print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
                 return 1
             fi
@@ -135,9 +132,6 @@ download_guest_driver_asset() {
             if host_driver_is_html "$target"; then
                 rm -f "$target"
                 log_error "Download returned an HTML page (CrowdSec/security challenge), not ${display_name:-guest driver}."
-                if prompt_lxc_browser_download "$url" "$target" "${display_name:-guest driver}"; then
-                    return 0
-                fi
                 print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
                 return 1
             fi
@@ -150,9 +144,6 @@ download_guest_driver_asset() {
     fi
 
     log_error "Failed to download ${display_name:-guest driver} from $url"
-    if prompt_lxc_browser_download "$url" "$target" "${display_name:-guest driver}"; then
-        return 0
-    fi
     print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
     rm -f "$target"
     return 1

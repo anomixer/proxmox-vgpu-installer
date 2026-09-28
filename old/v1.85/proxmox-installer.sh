@@ -101,13 +101,6 @@ else
     exit 1
 fi
 
-if [ -f "$SCRIPT_DIR/lib/lxc-browser.sh" ]; then
-    source "$SCRIPT_DIR/lib/lxc-browser.sh"
-else
-    echo "ERROR: Required library lib/lxc-browser.sh not found"
-    exit 1
-fi
-
 # Variables
 LOG_FILE="$SCRIPT_DIR/debug.log"
 DEBUG=false
@@ -338,9 +331,6 @@ download_guest_driver_asset() {
             if host_driver_is_html "$target"; then
                 rm -f "$target"
                 echo -e "${RED}[!]${NC} Download returned an HTML page (CrowdSec/security challenge), not ${display_name:-guest driver}."
-                if prompt_lxc_browser_download "$url" "$target" "${display_name:-guest driver}"; then
-                    return 0
-                fi
                 print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
                 return 1
             fi
@@ -352,9 +342,6 @@ download_guest_driver_asset() {
             if host_driver_is_html "$target"; then
                 rm -f "$target"
                 echo -e "${RED}[!]${NC} Download returned an HTML page (CrowdSec/security challenge), not ${display_name:-guest driver}."
-                if prompt_lxc_browser_download "$url" "$target" "${display_name:-guest driver}"; then
-                    return 0
-                fi
                 print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
                 return 1
             fi
@@ -367,9 +354,6 @@ download_guest_driver_asset() {
     fi
 
     echo -e "${RED}[!]${NC} Failed to download ${display_name:-guest driver} from $url"
-    if prompt_lxc_browser_download "$url" "$target" "${display_name:-guest driver}"; then
-        return 0
-    fi
     print_manual_download_guidance "$url" "$filename" "$dest_dir" 0
     rm -f "$target"
     return 1

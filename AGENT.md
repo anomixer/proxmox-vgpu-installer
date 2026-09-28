@@ -6,8 +6,8 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 
 **Project**: Proxmox vGPU Installer v1.85
 **Status**: Stable release (main branch)
-**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, manual GPU override & unflagged card unlock support, Proxmox 9 + Pascal guards, experimental merged driver builder (Issue #10)
-**Key Files**: `proxmox-installer.sh`, `lib/*.sh`, `driver_patches.json`, `gpu_info.db`
+**Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, manual GPU override & unflagged card unlock support, Proxmox 9 + Pascal guards, experimental merged driver builder (Issue #10), browser LXC downloader (v1.90)
+**Key Files**: `proxmox-installer.sh`, `lib/*.sh`, `api/`, `driver_patches.json`, `gpu_info.db`
 
 ---
 
@@ -55,6 +55,14 @@ This repository contains a comprehensive Bash script that automates the installa
 - `validate_host_driver_file` rejects HTML responses (including CrowdSec challenge pages) before patching or installation. Newly downloaded invalid host-driver files are removed; invalid existing/local files stop Step 2 before `chmod` or patch execution.
 - If the mirror challenges command-line downloads, do not treat a successful HTTP 200 as a valid driver. The installer does **not** automate or bypass the browser challenge; instead `print_manual_download_guidance` prints step-by-step guidance: it recommends the single full-package branch ZIP for host drivers (via `_find_branch_zip_url`, e.g. `NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74.zip`) or the single file for pre-patched `*-custom.run` and guest drivers, then prints the exact `scp <file> <user>@<pve-ip>:<dir>/` command to copy it back to the Proxmox host.
 - `install_host_driver_download` auto-extracts a manually-placed `NVIDIA-GRID-Linux-KVM-*.zip` when the expected `.run` is missing (non-`-custom.run`), so the manual-download + SCP flow picks up on re-run. Guest-driver downloads (`download_guest_driver_asset` in both `proxmox-installer.sh` and `lib/guest-drivers.sh`) also detect an HTML response and print the same guidance.
+
+### v1.90 Browser LXC Downloader
+- `lib/lxc-browser.sh` provides the browser-LXC download flow. When `download_host_driver`/`download_guest_driver_asset` hits an HTML challenge, `prompt_lxc_browser_download` is called before the manual guidance: it reuses a ready browser LXC silently, otherwise asks `y/n` once, creates the container at the first free CTID (base `VGPU_LXC_CTID_BASE` default 9000, then 9001...), and downloads the driver directly on the PVE host.
+- `api/` holds the LXC scripts: `create-lxc.sh` (Alpine CT), `setup-lxc.sh` (installs Chromium/Xvfb/Fluxbox/x11vnc/noVNC, pushes `main.py` + `browser-supervisor.sh`, writes PVE note), `start-browser-lxc.sh` (starts LXC, waits for API), `test-lxc.sh`, `browser-supervisor.sh`, `main.py` (FastAPI: `/api/download` opens native Chromium, `/api/check` polls, `/api/health`).
+- Flow: `/api/download?url=` → native Chromium (not Playwright, no automation signals) downloads to `/home/user/Downloads/` → poll `/api/check` → `pct pull` back to the installer dest → validate not HTML → cleanup. **The only manual step** is when the site needs a click/verification: the installer prints the noVNC URL (`http://<lxc-ip>:6080/vnc.html`), the user opens it, sees the Chromium desktop, and clicks the download button / passes the challenge as a real user; the file then lands in `/home/user/Downloads/`.
+- Browser route: the LXC download path converts alist `/p/` URLs to `/d/` (`_lxc_browser_to_d_url`) so Chromium goes through the alist share-page route a real browser uses, rather than the raw `/p/` proxy that CrowdSec challenges. `curl`/`wget` fallbacks keep `/p/`.
+- CTID collision: `lxc_browser_find_ctid` scans base..base+9; if the default CTID already exists it returns the first free CTID (so a fresh browser LXC is created at 9001 etc.), and reuses an existing ready browser LXC without prompting.
+- Cleanup: the `browser-api` LXC (default CTID 9000) is only for these downloads; it can be deleted anytime with `pct stop <ctid> && pct destroy <ctid>` (or the PVE UI). It is not required for normal driver installation.
 
 ### Issue #29 Note (Pascal + 20.x)
 - `perform_step_two` captures the Step 1 `DRIVER_VERSION` hint before the driver menu; if the user picks `20.x` while the hint's max branch is 16 (contains `16` but no `17+`), the installer prints a **non-blocking warning only** and continues — no gate, per the v1.84+ liberation philosophy.
@@ -366,7 +374,9 @@ proxmox-vgpu-installer/
 │   ├── guest-drivers.sh          # Guest driver catalog
 │   ├── vgpu-unlock.sh            # vGPU unlock support
 │   ├── vgpu-merge.sh             # Merged driver builder (experimental, Issue #10)
-│   └── fastapi-dls.sh            # Licensing server
+│   ├── fastapi-dls.sh            # Licensing server
+│   └── lxc-browser.sh            # Browser LXC downloader (v1.90)
+├── api/                          # Browser LXC scripts (create/setup/start/test + main.py)
 ├── driver_patches.json           # Patch-to-driver mapping
 ├── gpu_info.db                   # GPU compatibility database
 ├── README.md                     # Main documentation

@@ -215,12 +215,8 @@ install_host_driver_download() {
     fi
 
     if ! downloaded_file=$(download_host_driver "$url" "$output_dir"); then
-        if prompt_lxc_browser_download "$url" "$output_dir/$expected_filename" "host driver"; then
-            downloaded_file="$output_dir/$expected_filename"
-        else
-            print_manual_download_guidance "$url" "$expected_filename" "$output_dir" auto
-            return 1
-        fi
+        print_manual_download_guidance "$url" "$expected_filename" "$output_dir" auto
+        return 1
     fi
     if ! validate_host_driver_file "$downloaded_file"; then
         rm -f "$downloaded_file"
