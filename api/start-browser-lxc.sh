@@ -41,7 +41,7 @@ if ! pct status "$CTID" >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "[1/5] Starting LXC"
+echo "[1/3] Starting LXC"
 pct start "$CTID" 2>/dev/null || true
 
 IP=""
@@ -61,12 +61,12 @@ fi
 
 echo "Current LXC IP: ${IP}"
 
-echo "[2/5] Starting desktop/API in LXC"
+echo "[2/3] Starting desktop/API in LXC"
 pct exec "$CTID" -- rc-service browser-supervisor start
 
 echo "supervisor started"
 
-echo "[3/5] Waiting for API at ${IP}:${API_PORT}"
+echo "[3/3] Waiting for API at ${IP}:${API_PORT}"
 
 API_READY=0
 for _ in $(seq 1 "$WAIT_SECONDS"); do

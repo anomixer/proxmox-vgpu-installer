@@ -1,6 +1,6 @@
 #!/bin/bash
 # lib/vgpu-merge.sh - Merged driver builder (vGPU-Unlock-Patcher integration)
-# Part of proxmox-vgpu-installer v1.85 (experimental, Issue #10)
+# Part of proxmox-vgpu-installer v1.90 (experimental, Issue #10)
 #
 # Backend: https://github.com/greglechin/vGPU-Unlock-Patcher (fork of
 # benjamindoron/vGPU-Unlock-Patcher, itself from VGPU-Community-Drivers).
@@ -368,7 +368,7 @@ merge_post_install() {
 build_merged_driver_interactive() {
     merge_load_catalog
     echo ""
-    echo -e "${YELLOW}=== Experimental merged driver builder (v1.85, Issue #10) ===${NC}"
+    echo -e "${YELLOW}=== Experimental merged driver builder (v1.90, Issue #10) ===${NC}"
     echo -e "${YELLOW}Backend: greglechin/vGPU-Unlock-Patcher. Only 4 branches supported.${NC}"
     echo -e "${YELLOW}Prereq: finish option 1 (Step 1) + reboot FIRST. This REPLACES Step 2 — do NOT run option 2 before/after.${NC}"
     echo -e "${YELLOW}Default unlock path (options 1-2) is unchanged.${NC}"

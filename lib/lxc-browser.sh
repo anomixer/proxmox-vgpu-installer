@@ -21,8 +21,10 @@ lxc_browser_exists() {
     pct status "$1" >/dev/null 2>&1
 }
 
+# Read the LXC hostname from its config so this also works while the container
+# is STOPPED (pct exec would fail on a stopped container and break reuse).
 lxc_browser_hostname() {
-    pct exec "$1" -- cat /etc/hostname 2>/dev/null || true
+    pct config "$1" 2>/dev/null | sed -n 's/^hostname:[[:space:]]*//p' | head -1
 }
 
 lxc_browser_get_ip() {
@@ -175,7 +177,7 @@ lxc_browser_download() {
         log_error "pct pull failed for ${label}"
         return 1
     fi
-    if host_driver_is_html "$tmp"; then
+    if host_driver_is_html_raw "$tmp"; then
         rm -f "$tmp"
         log_error "Browser download returned an HTML page for ${label}"
         return 1
@@ -226,7 +228,10 @@ prompt_lxc_browser_download() {
     fi
 
     if ! lxc_browser_api_ready "$ctid"; then
-        if ! confirm_action "alist is protected by CrowdSec. Create a browser LXC (CTID ${ctid}) to download ${label} directly?"; then
+        log_error "The alist website is protected by CrowdSec; direct script download may fail."
+        log_debug "Alternative: Create a browser-api LXC (CTID ${ctid}) to fetch it via noVNC."
+        echo -e "    (LXC setup takes 5-10 mins. Depending on your IP reputation, this will be:\n     - Full-auto: No interaction needed.\n     - Semi-auto: You must open noVNC to pass the human verification.)"
+        if ! confirm_action "Proceed with the LXC setup and then download ${label}?"; then
             return 1
         fi
         log_info "Creating browser LXC (CTID ${ctid})..."

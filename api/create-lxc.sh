@@ -80,7 +80,7 @@ pct create "$CTID" "$TEMPLATE_PATH" \
     --net0 "name=eth0,bridge=${BRIDGE},ip=dhcp,type=veth" \
     --unprivileged 0 \
     --features nesting=1 \
-    --onboot 1 \
+    --onboot 0 \
     --start 0
 
 cat <<EOF

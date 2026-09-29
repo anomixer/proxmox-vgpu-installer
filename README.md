@@ -8,13 +8,22 @@ A comprehensive Bash script that automates the installation and configuration of
 
 **How it works:**
 
-1. The installer detects the CrowdSec challenge and asks: *"alist is protected by CrowdSec. Create a browser LXC (CTID 9000) to download directly? (y/n)"*
-2. On `y`, it creates an Alpine LXC (`api/create-lxc.sh`), installs Chromium + Xvfb + Fluxbox + VNC + noVNC + the browser API (`api/setup-lxc.sh`), and starts it (`api/start-browser-lxc.sh`).
+1. The installer detects the CrowdSec challenge and asks:
+
+   ```
+   [!] The alist website is protected by CrowdSec; direct script download may fail.
+   [i] Alternative: Create a browser-api LXC (CTID 9000) to fetch it via noVNC.
+       (LXC setup takes 5-10 mins. Depending on your IP reputation, this will be:
+        - Full-auto: No interaction needed.
+        - Semi-auto: You must open noVNC to pass the human verification.)
+   [?] Proceed with the LXC setup and then download <file>? (y/n):
+   ```
+2. On `y`, it checks for an existing **browser-api** LXC: if one is present (even if stopped), it reuses it and `pct start`s it. Only if none exists does it create a fresh Alpine LXC (`api/create-lxc.sh`, default CTID 9000), install Chromium + Xvfb + Fluxbox + VNC + noVNC + the browser API (`api/setup-lxc.sh`), and start it (`api/start-browser-lxc.sh`).
 3. It converts the URL from the raw `/p/` proxy route to the browser-friendly `/d/` share-page route, then calls the browser API `/api/download` to open the file in native Chromium.
 4. **The only manual step**: if the site needs a click or verification, the installer prints the noVNC URL (`http://<lxc-ip>:6080/vnc.html`); you open it in your browser, see the Chromium screen, and click the download button / pass the verification as a real user. The file then lands in the LXC's `/home/user/Downloads/`.
 5. The installer polls `/api/check` until the file is ready, then `pct pull`s it back to the PVE host, validates it's a real driver (not an HTML page), cleans up the LXC, and continues.
 
-**Result:** the driver ends up directly on the Proxmox host — no laptop download, no `scp`. The CTID auto-increments (9000 → 9001 → …) if the default is taken, and a ready browser LXC is reused silently on later runs.
+**Result:** the driver ends up directly on the Proxmox host — no laptop download, no `scp`. The browser LXC is reused silently on later runs (even if it was left stopped); it is only created once, and only a new CTID (9001, 9002…) is picked if no browser LXC exists yet.
 
 > [!NOTE]
 > **Cleanup:** the `browser-api` LXC (default CTID 9000) is only needed for these downloads. If you no longer need it, you can delete it anytime:
@@ -144,7 +153,7 @@ This installer targets **x86_64 (amd64)** Proxmox VE installations exclusively. 
 ## Version History
 
 Changes in version 1.90 (latest release)
-- **Browser LXC downloader**: When an Alist download is challenged by CrowdSec, the installer now offers to create a browser LXC on the Proxmox host (Alpine + Chromium + Xvfb + noVNC) and download the driver directly through a real browser — no manual download or `scp` needed. It asks once (`y/n`), creates the container at the first free CTID (default 9000, then 9001...), starts the browser API, downloads the file, pulls it back with `pct pull`, and validates it is not an HTML challenge. If manual verification is required, it prints the noVNC URL. Backed by the new `api/` directory and `lib/lxc-browser.sh`.
+- **Browser LXC downloader**: When an Alist download is challenged by CrowdSec, the installer offers to run the download through a real browser in an isolated LXC on the Proxmox host (Alpine + Chromium + Xvfb + noVNC) — no manual download or `scp` needed. It asks once (`y/n`); if a **browser-api** LXC already exists it reuses it (even when stopped), otherwise it creates one at the first free CTID (default 9000, then 9001...), starts the browser API, downloads the file via Chromium, pulls it back with `pct pull`, and validates it is not an HTML challenge. If manual verification is required, it prints the noVNC URL. Backed by the new `api/` directory and `lib/lxc-browser.sh`.
 
 Changes in version 1.85
 - **Alist download URL and HTML response handling**: Host auto-discovery now uses Alist's `/p/` file-download route instead of the `/d/` share-page route. Guest-driver catalog URLs and manual URL examples use `/p/` as well. Before patching or installing, the installer checks driver files for HTML pages such as CrowdSec challenges; invalid freshly downloaded files are removed and installation stops with a clear message. If command-line downloads are challenged, the installer now prints step-by-step guidance: it recommends the single full-package branch ZIP (e.g. `NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74.zip`) or the single file for pre-patched `*-custom.run` and guest drivers, prints the exact `scp` command to copy the file back to the Proxmox host, and auto-extracts a manually-placed ZIP on re-run.

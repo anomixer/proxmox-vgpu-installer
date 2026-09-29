@@ -115,7 +115,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.85
+SCRIPT_VERSION=1.90
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -2404,7 +2404,7 @@ case $STEP in
                 run_command "Removing vgpu-proxmox" "notification" "rm -rf $VGPU_DIR/vgpu-proxmox"
             fi
 
-            # Removing merged patcher checkouts (v1.85+, Issue #10)
+            # Removing merged patcher checkouts (v1.90+, Issue #10)
             if confirm_action "Do you want to remove merged patcher checkouts (vgpu-unlock-patcher-*)?"; then
                 run_command "Removing merged patcher" "notification" "rm -rf $VGPU_DIR/vgpu-unlock-patcher-*"
             fi

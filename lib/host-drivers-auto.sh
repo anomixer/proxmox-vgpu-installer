@@ -89,11 +89,25 @@ find_host_driver() {
     return 1
 }
 
-# Download from alist (direct .run or |zip) and rename to the catalog filename.
-host_driver_is_html() {
+# Real HTML check (ignores the CrowdSec simulation flag). Used by the browser
+# LXC downloader to validate what a real browser fetched.
+host_driver_is_html_raw() {
     local file="$1"
     [ -f "$file" ] || return 1
     LC_ALL=C head -c 8192 "$file" 2>/dev/null | grep -aEiq '<!doctype[[:space:]]+html|<html([[:space:]>])|CrowdSec Challenge'
+}
+
+# Download from alist (direct .run or |zip) and rename to the catalog filename.
+# With VGPU_SIMULATE_CROWDSEC=1 (used by proxmox-installer-test.sh) every file
+# is reported as an HTML challenge, so the full installer exercises the browser
+# LXC path even when the real download would have succeeded.
+host_driver_is_html() {
+    local file="$1"
+    [ -f "$file" ] || return 1
+    if [ "${VGPU_SIMULATE_CROWDSEC:-0}" = "1" ]; then
+        return 0
+    fi
+    host_driver_is_html_raw "$file"
 }
 
 validate_host_driver_file() {
@@ -102,7 +116,7 @@ validate_host_driver_file() {
         echo -e "${RED}[!]${NC} Host driver file not found: $file" >&2
         return 1
     fi
-    if host_driver_is_html "$file"; then
+    if host_driver_is_html_raw "$file"; then
         echo -e "${RED}[!]${NC} $file contains an HTML page, not an NVIDIA driver." >&2
         echo -e "${YELLOW}[-]${NC} The download server may have returned a CrowdSec/security challenge page." >&2
         echo -e "${YELLOW}[-]${NC} Remove this file and download the driver from an accessible source, or ask the mirror owner to allow direct downloads." >&2
@@ -257,7 +271,7 @@ resolve_host_driver_url() {
 download_host_driver() {
     local url="$1"
     local output_dir="${2:-.}"
-    
+
     # Check if URL is ZIP format
     if [[ "$url" == *"|zip" ]]; then
         url="${url%|zip}"
@@ -316,7 +330,16 @@ download_host_driver() {
             mv "$driver_file" "$output_dir/"
         fi
         rm -f "$output_dir/$zip_file"
-        
+
+        # Deliberately judge the extracted .run as a CrowdSec challenge under
+        # VGPU_SIMULATE_CROWDSEC=1, mirroring a real direct download that was
+        # challenged by CrowdSec.
+        if host_driver_is_html "$output_dir/$(basename "$driver_file")"; then
+            rm -f "$output_dir/$(basename "$driver_file")"
+            echo -e "${RED}[!]${NC} Downloaded ZIP yielded an HTML page (CrowdSec/security challenge)." >&2
+            return 1
+        fi
+
         echo "${output_dir}/$(basename "$driver_file")"
         return 0
     else
@@ -347,8 +370,12 @@ download_host_driver() {
             return 1
         fi
 
-        if ! validate_host_driver_file "$output_dir/$driver_file"; then
+        # Deliberately judge the freshly downloaded file as a CrowdSec challenge
+        # under VGPU_SIMULATE_CROWDSEC=1, so the browser LXC path is exercised
+        # exactly as a user sees when CrowdSec challenges a real direct download.
+        if host_driver_is_html "$output_dir/$driver_file"; then
             rm -f "$output_dir/$driver_file"
+            echo -e "${RED}[!]${NC} Downloaded $driver_file is an HTML page (CrowdSec/security challenge)." >&2
             return 1
         fi
         

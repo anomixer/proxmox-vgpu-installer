@@ -4,7 +4,7 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 
 ## Quick Context
 
-**Project**: Proxmox vGPU Installer v1.85
+**Project**: Proxmox vGPU Installer v1.90
 **Status**: Stable release (main branch)
 **Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, manual GPU override & unflagged card unlock support, Proxmox 9 + Pascal guards, experimental merged driver builder (Issue #10), browser LXC downloader (v1.90)
 **Key Files**: `proxmox-installer.sh`, `lib/*.sh`, `api/`, `driver_patches.json`, `gpu_info.db`
@@ -17,7 +17,7 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 This repository contains a comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. The project handles the complex process of setting up vGPU support including driver installation, patching, licensing, and system configuration with support for both native vGPU and vgpu_unlock capabilities.
 
 ### Main Components
-- **proxmox-installer.sh** - Main installer (v1.85, supports driver 16.x-20.1 + experimental merged 550.90/570.124/580.126/580.159)
+- **proxmox-installer.sh** - Main installer (v1.90, supports driver 16.x-20.1 + experimental merged 550.90/570.124/580.126/580.159)
 - **lib/*.sh** - Modular components (repo, kernel, driver, GPU detection, etc.)
 - **lib/vgpu-merge.sh** - Experimental merged builder (vGPU-Unlock-Patcher, Issue #10)
 - **config.txt** - Runtime configuration (step, driver version, vGPU support)
@@ -39,9 +39,9 @@ This repository contains a comprehensive Bash script that automates the installa
 
 ---
 
-## v1.85 & v1.84 Features & Improvements
+## v1.90 & v1.85 & v1.84 Features & Improvements
 
-### v1.85 Experimental Merged Driver Builder (Issue #10, Latest)
+### v1.90 Experimental Merged Driver Builder (Issue #10)
 - **Menu option 7 `Build merged driver (experimental)`** (`lib/vgpu-merge.sh`): clones `greglechin/vGPU-Unlock-Patcher` (`--recursive --branch`) for 4 branches only — `550.90`→17.3 legacy, `570.124`→18.0, `580.126`→19.4, `580.159`→19.5 — then `./patch.sh --repack <vgpu-kvm|general-merge>`.
 - **Inputs**: VGPU `.run` staged from installer cwd or fetched via existing alist `resolve_host_driver_url` fallback; `general-merge` additionally requires the matching GNRL consumer `.run` placed manually (NVIDIA portal / driver archive).
 - **Install**: `--dkms -m=kernel -s` (+ `build_secure_boot_flags`), then reuses Step-2 tail (services, `nvidia-smi` check, guest drivers, FastAPI-DLS, summary). Persists `DRIVER_VERSION`/`MERGE_BRANCH` to `config.txt`.
@@ -50,7 +50,7 @@ This repository contains a comprehensive Bash script that automates the installa
 - **Scope**: default unlock path (options 1-2, `vgpu-proxmox` + `vgpu_unlock-rs`, `driver_patches.json` 16.x–17.6) is unchanged.
 - **Menu flow**: merged path is `1 → reboot → 7` (option 7 replaces Step 2; never run option 2 after 7). README documents the driver-branch picker (Pascal caps at 19.x, Issue #29) and the two paths.
 
-### v1.85 Alist Download URLs and HTML Validation
+### v1.90 Alist Download URLs and HTML Validation
 - Alist `/d/` URLs open the share page; use `/p/` for the actual file download. `lib/host-drivers-auto.sh` builds discovered host-driver URLs with `_ALIST_DL_BASE=/p/foxipan/vGPU`; guest-driver catalog URLs in `proxmox-installer.sh` also use `/p/`.
 - `validate_host_driver_file` rejects HTML responses (including CrowdSec challenge pages) before patching or installation. Newly downloaded invalid host-driver files are removed; invalid existing/local files stop Step 2 before `chmod` or patch execution.
 - If the mirror challenges command-line downloads, do not treat a successful HTTP 200 as a valid driver. The installer does **not** automate or bypass the browser challenge; instead `print_manual_download_guidance` prints step-by-step guidance: it recommends the single full-package branch ZIP for host drivers (via `_find_branch_zip_url`, e.g. `NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74.zip`) or the single file for pre-patched `*-custom.run` and guest drivers, then prints the exact `scp <file> <user>@<pve-ip>:<dir>/` command to copy it back to the Proxmox host.
@@ -61,7 +61,7 @@ This repository contains a comprehensive Bash script that automates the installa
 - `api/` holds the LXC scripts: `create-lxc.sh` (Alpine CT), `setup-lxc.sh` (installs Chromium/Xvfb/Fluxbox/x11vnc/noVNC, pushes `main.py` + `browser-supervisor.sh`, writes PVE note), `start-browser-lxc.sh` (starts LXC, waits for API), `test-lxc.sh`, `browser-supervisor.sh`, `main.py` (FastAPI: `/api/download` opens native Chromium, `/api/check` polls, `/api/health`).
 - Flow: `/api/download?url=` → native Chromium (not Playwright, no automation signals) downloads to `/home/user/Downloads/` → poll `/api/check` → `pct pull` back to the installer dest → validate not HTML → cleanup. **The only manual step** is when the site needs a click/verification: the installer prints the noVNC URL (`http://<lxc-ip>:6080/vnc.html`), the user opens it, sees the Chromium desktop, and clicks the download button / passes the challenge as a real user; the file then lands in `/home/user/Downloads/`.
 - Browser route: the LXC download path converts alist `/p/` URLs to `/d/` (`_lxc_browser_to_d_url`) so Chromium goes through the alist share-page route a real browser uses, rather than the raw `/p/` proxy that CrowdSec challenges. `curl`/`wget` fallbacks keep `/p/`.
-- CTID collision: `lxc_browser_find_ctid` scans base..base+9; if the default CTID already exists it returns the first free CTID (so a fresh browser LXC is created at 9001 etc.), and reuses an existing ready browser LXC without prompting.
+- CTID reuse & collision: `lxc_browser_find_ctid` scans base..base+9. It reuses an existing browser LXC (hostname `browser-api`, read via `pct config` so it works even when STOPPED) by `pct start`-ing it and waiting for the API — no new container is created. Only when no browser LXC exists does it return the first free CTID (base default 9000, then 9001...).
 - Cleanup: the `browser-api` LXC (default CTID 9000) is only for these downloads; it can be deleted anytime with `pct stop <ctid> && pct destroy <ctid>` (or the PVE UI). It is not required for normal driver installation.
 
 ### Issue #29 Note (Pascal + 20.x)
@@ -200,7 +200,7 @@ To reset to auto-discovery: remove `URL` / `FILE` from `config.txt`.
 ## Known Limitations & Future Considerations
 
 ### Issue #10: vGPU-Unlock-Patcher Integration
-**Status**: Implemented as experimental opt-in (v1.85, menu option 7)
+**Status**: Implemented as experimental opt-in (v1.90, menu option 7)
 
 **Scope:**
 - Patcher branches: 550.90 (17.3 legacy), 570.124 (18.0), 580.126 (19.4), 580.159 (19.5 latest greglechin)
