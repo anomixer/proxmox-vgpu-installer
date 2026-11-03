@@ -1,4 +1,4 @@
-# Proxmox vGPU Installer v1.90
+# Proxmox vGPU Installer v1.91
 
 A comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. This tool supports multiple GPU types, driver versions, and provides both native vGPU and vgpu_unlock capabilities.
 
@@ -49,7 +49,7 @@ For complete documentation on script architecture, features, and usage, visit ht
 | **Maxwell** (GM20x) | **vGPU Unlock** (GeForce) | GTX 980, GTX 970 | vGPU 16.x (535.x) | **Kernel <= 6.5.x** | **PVE 8.x** (with 6.5 downgrade), PVE 7.x | Stay on PVE 7 or PVE 8 with kernel 6.5.x only. |
 | **Maxwell** (GM20x) | **Native vGPU** (Enterprise) | Tesla M4, M10, M60 | vGPU 16.x (e.g. 16.14) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Can run on newer kernels and newer PVE branches natively. |
 | **Pascal** (GP10x) | **vGPU Unlock** (GeForce) | GTX 1080, GTX 1070, GTX 1060 | vGPU 16.x (535.x) | **Kernel <= 6.5.x** | **PVE 8.x** (with 6.5 downgrade), PVE 7.x | Use PVE 8 with pinned 6.5.x; do not target PVE 9+. |
-| **Pascal** (GP10x) | **Native vGPU** (Enterprise) | Tesla P4, Tesla P40, Tesla P100 | vGPU 16.x (e.g. 16.14) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Compatible with PVE 8 and PVE 9 using native vGPU. |
+| **Pascal** (GP10x) | **Native vGPU** (Enterprise) | Tesla P4, Tesla P40, Tesla P100 | 16.x to 19.x; verify the exact GPU | Verify the exact driver and kernel combination | PVE 8.x / 9.x; combination dependent | 16.14 initialized a P100 on kernel 7 in Issue #31; full vGPU operation was not confirmed. 19.5 failed on that host. |
 | **Turing** (TU10x/TU11x) | **vGPU Unlock** (GeForce) | RTX 2080, GTX 1660, etc. | vGPU 16.x (535.x), vGPU 17.6 (550.x) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Supported on PVE 9+ when using newer vGPU branches (17.6+). |
 | **Turing** (TU10x) | **Native vGPU** (Enterprise) | Tesla T4, Quadro RTX 6000 | vGPU 16.x to 20.x | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Compatible on PVE 8 and PVE 9. |
 | **Ampere & Newer** (GA/AD/GB) | **vGPU Unlock** (GeForce) | RTX 3080, RTX 4090, RTX 5090 | **NOT SUPPORTED** | N/A | N/A | Not supported for unlock by this project. |
@@ -71,13 +71,13 @@ The menu lists newest first, but **newest is NOT always correct for your card**.
 
 | Your GPU | Pick this branch (max) | NEVER pick |
 | :--- | :--- | :--- |
-| **Tesla P100 / P40 / P4 / P6** (Pascal enterprise, native) | **19.5 (580.159.01)** — Pascal's last supported branch | **20.x (595.x)**: NVIDIA dropped Pascal; install "succeeds" but `dmesg` says `supported through the NVIDIA 580.xx Legacy drivers` and `nvidia-smi` fails ([Issue #29](https://github.com/anomixer/proxmox-vgpu-installer/issues/29)) |
+| **Tesla P100 / P40 / P4 / P6** (Pascal enterprise, native) | **19.5 (580.159.01)**; verify the exact kernel combination | **20.x (595.x)**: NVIDIA dropped Pascal; install "succeeds" but `dmesg` says `supported through the NVIDIA 580.xx Legacy drivers` and `nvidia-smi` fails ([Issue #29](https://github.com/anomixer/proxmox-vgpu-installer/issues/29)) |
 | **Tesla T4 and newer** (Turing+, native) | Newest available (20.x on kernel 7.x) | — |
 | **Consumer Maxwell/Pascal** (GTX 9/10-series, unlock) | **16.x** on PVE 8 + kernel 6.5.x | Anything on PVE 9 (impossible kernel downgrade) |
 | **Consumer Turing** (RTX 20-series, GTX 16-series, unlock) | 17.6+ (default path) or merged 18.0/19.4/19.5 (option 7) | 20.x (no unlock patch) |
 
 > [!WARNING]
-> **Tesla P100 users**: your card (e.g. `10de:15f8`) is Pascal. The menu's option `1: 20.1 (595.71.03)` will install but the driver will ignore your GPU. Always choose **19.5** or older. The installer now also warns you at runtime if it detects this mismatch.
+> **Tesla P100 users**: your card (e.g. `10de:15f8`) is Pascal. The 20.x branch will install but the driver will ignore your GPU. Consider **19.5** or older and verify the exact kernel combination; 19.5 failed on the kernel 7 multi-GPU host in [Issue #31](https://github.com/anomixer/proxmox-vgpu-installer/issues/31). The installer also warns if it detects this mismatch.
 
 ### Which Menu Path Should I Use? (Read This First!)
 
@@ -152,7 +152,11 @@ This installer targets **x86_64 (amd64)** Proxmox VE installations exclusively. 
 
 ## Version History
 
-Changes in version 1.90 (latest release)
+Changes in version 1.91 (latest release)
+- **Multi-GPU selection fix (Issue #32)**: Accepts all displayed GPU numbers, including 10 and above, and retries invalid input. Each GPU is shown with its PCI address, device ID, and its own database classification. Selection uses the same ordered list shown on screen.
+- **Native driver diagnostics (Issue #31)**: Warns that older native vGPU branches on kernel 7 need combination-specific validation. On native driver installation failure, preserves the NVIDIA installer log when available and prints read-only diagnostic commands; it does not determine the cause or change the kernel automatically.
+
+Changes in version 1.90
 - **Browser LXC downloader**: When an Alist download is challenged by CrowdSec, the installer offers to run the download through a real browser in an isolated LXC on the Proxmox host (Alpine + Chromium + Xvfb + noVNC) — no manual download or `scp` needed. It asks once (`y/n`); if a **browser-api** LXC already exists it reuses it (even when stopped), otherwise it creates one at the first free CTID (default 9000, then 9001...), starts the browser API, downloads the file via Chromium, pulls it back with `pct pull`, and validates it is not an HTML challenge. If manual verification is required, it prints the noVNC URL. Backed by the new `api/` directory and `lib/lxc-browser.sh`.
 
 Changes in version 1.85
@@ -167,7 +171,7 @@ Changes in version 1.85
   - Limitations: each host version needs its own upstream branch + blob diff; `19.0~19.3`, `18.1~18.3`, `20.x` have no merged patch. Pascal/Maxwell still require `16.x + kernel <= 6.5 + PVE 8` regardless of backend.
 - **vGPU 20.2 driver support**: host `595.91.04` (auto-discovery), Linux guest `595.91.07`, Windows guest `596.86`. Adds support for the newly released **NVIDIA RTX PRO 5000 Blackwell Workstation Edition 72 GB**. Native only.
 
-Changes in version 1.84 (previous release)
+Changes in version 1.84
 - **Manual Override & Unregistered GPU Opt-in Support**:
   - Removed strict hard gate blocking for GPUs missing from `gpu_info.db` or marked as unsupported (`No`).
   - Added an interactive warning prompt during GPU detection, explaining PCI ID range spoofing in `vgpu_unlock` (Maxwell, Pascal, Turing, Ampere, etc.).
@@ -353,7 +357,7 @@ Changes in version 1.1 (original author wvthoog's latest release)
 - **20.0**: 595.58.02 (Kernel 7.x support)
 
 ### v19.x Series (Native vGPU Only)
-- **19.5**: 580.159.01 (latest release)
+- **19.5**: 580.159.01 (latest listed 19.x release)
 - **19.4**: 580.126.08
 - **19.3**: 580.105.06
 - **19.2**: 580.95.02 (supports RTX PRO 6000D)

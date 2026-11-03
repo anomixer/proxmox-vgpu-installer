@@ -115,7 +115,7 @@ STEP="${STEP:-1}"
 URL="${URL:-}"
 FILE="${FILE:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-}"
-SCRIPT_VERSION=1.90
+SCRIPT_VERSION=1.91
 VGPU_DIR="$SCRIPT_DIR"
 VGPU_SUPPORT="${VGPU_SUPPORT:-}"
 VGPU_HELPER_STATUS="${VGPU_HELPER_STATUS:-}"
@@ -945,6 +945,31 @@ run_command() {
     fi
 }
 
+# Preserve the NVIDIA installer log before a later installation can overwrite it.
+report_native_driver_failure() {
+    local saved_log=""
+    echo -e "${RED}[!]${NC} Native driver installation failed. The cause requires the NVIDIA installer and kernel logs."
+    if [ -r /var/log/nvidia-installer.log ]; then
+        saved_log=$(umask 077; mktemp "$SCRIPT_DIR/nvidia-installer-failure.XXXXXXXX.log") || saved_log=""
+        if [ -n "$saved_log" ]; then
+            if cp /var/log/nvidia-installer.log "$saved_log"; then
+                echo -e "${YELLOW}[-]${NC} Preserved installer log: $saved_log (check its timestamp matches this attempt)"
+            else
+                rm -f -- "$saved_log"
+                echo -e "${YELLOW}[-]${NC} Could not preserve /var/log/nvidia-installer.log; inspect it before retrying."
+            fi
+        else
+            echo -e "${YELLOW}[-]${NC} Could not create a log copy; inspect /var/log/nvidia-installer.log before retrying."
+        fi
+    else
+        echo -e "${YELLOW}[-]${NC} /var/log/nvidia-installer.log is unavailable; inspect $LOG_FILE instead."
+    fi
+    echo -e "${YELLOW}[-]${NC} Collect: uname -r; pveversion -v; dkms status; mokutil --sb-state"
+    echo -e "${YELLOW}[-]${NC} Check GPU bindings: lspci -nnk -d 10de:"
+    echo -e "${YELLOW}[-]${NC} Check current boot kernel messages: journalctl -k -b"
+    echo -e "${YELLOW}[-]${NC} Review logs for private information before sharing them."
+}
+
 # Check Proxmox version
 pve_info=$(pveversion)
 version=$(echo "$pve_info" | sed -n 's/^pve-manager\/\([0-9.]*\).*$/\1/p')
@@ -1539,6 +1564,14 @@ perform_step_two() {
         fi
     fi
 
+    # Older native branches on kernel 7 need version-specific validation. A
+    # successful install on one combination does not establish general support.
+    if [ "${VGPU_SUPPORT:-}" = "Native" ] && [[ "${driver_version:-}" =~ ^(16|17|18|19)\. ]] && version_ge "$(uname -r | cut -d- -f1)" "7.0"; then
+        echo -e "${YELLOW}[!]${NC} Native vGPU $driver_version on kernel $(uname -r) is not verified by this installer."
+        echo -e "${YELLOW}[-]${NC} Check the exact GPU, driver and kernel combination against current vendor support and test results."
+        echo -e "${YELLOW}[-]${NC} Continuing without changing your kernel or driver choice."
+    fi
+
     # Fallback to pre-patched custom driver if the original is not present
     custom_filename="${driver_filename%.run}-custom.run"
     if [[ "$driver_filename" == *-vgpu-kvm-custom.run ]]; then
@@ -1729,11 +1762,11 @@ perform_step_two() {
             exit 1
         fi
     elif [ "$VGPU_SUPPORT" = "Native" ] || [ "$VGPU_SUPPORT" = "Unknown" ]; then
-        # Run the regular driver installer
-		
-		echo "Installing native driver" "info" "./$driver_filename $install_flags"
-		
-        run_command "Installing native driver" "info" "./$driver_filename $install_flags"
+        # Preserve the detailed NVIDIA log on failure before a retry overwrites it.
+        if ! run_command "Installing native driver" "info" "./$driver_filename $install_flags"; then
+            report_native_driver_failure
+            return 1
+        fi
     else
         echo -e "${RED}[!]${NC} Unknown or unsupported GPU: $VGPU_SUPPORT"
         echo ""
@@ -2036,12 +2069,14 @@ case $STEP in
 
                 # Declare associative array to store GPU PCI IDs and device IDs
                 declare -A gpu_pci_groups
+                gpu_pci_order=()
 
                 # Iterate over each GPU device line
                 while read -r device; do
                     pci_id=$(echo "$device" | awk '{print $1}')
                     pci_device_id=$(echo "$device" | grep -oE '\[10de:[0-9a-fA-F]{2,4}\]' | cut -d ':' -f 2 | tr -d ']')
                     gpu_pci_groups["$pci_id"]="$pci_device_id"
+                    gpu_pci_order+=("$pci_id")
                 done <<< "$gpu_devices"
 
                 # Iterate over each VGA GPU device, query its info, and display it
@@ -2052,7 +2087,7 @@ case $STEP in
                 VGPU_SUPPORT="Unknown"
 
                 index=1
-                for pci_id in "${!gpu_pci_groups[@]}"; do
+                for pci_id in "${gpu_pci_order[@]}"; do
                     gpu_device_id=${gpu_pci_groups[$pci_id]}
                     query_result=$(query_gpu_info "$gpu_device_id")
                     
@@ -2067,47 +2102,14 @@ case $STEP in
                             chip="Unknown"
                         fi
 
-                        #echo "Driver: $driver"                        
-                        
-                        case $vgpu in
-                            No)
-                                if [[ "$VGPU_SUPPORT" == "Unknown" ]]; then
-                                    gpu_info="is not vGPU capable"
-                                    VGPU_SUPPORT="No"
-                                fi
-                                ;;
-                            Yes)
-                                if [[ "$VGPU_SUPPORT" == "No" ]]; then
-                                    gpu_info="is vGPU capable through vgpu_unlock with driver version $driver"
-                                    VGPU_SUPPORT="Yes"
-                                    echo "info1: $driver"  
-                                elif [[ "$VGPU_SUPPORT" == "Unknown" ]]; then
-                                    gpu_info="is vGPU capable through vgpu_unlock with driver version $driver"
-                                    VGPU_SUPPORT="Yes"
-                                    echo "info2: $driver"  
-                                fi
-                                ;;
-                            Native)
-                                if [[ "$VGPU_SUPPORT" == "No" ]]; then
-                                    gpu_info="supports native vGPU with driver version $driver"
-                                    VGPU_SUPPORT="Native"
-                                elif [[ "$VGPU_SUPPORT" == "Yes" ]]; then
-                                    gpu_info="supports native vGPU with driver version $driver"
-                                    VGPU_SUPPORT="Native"
-                                    # Implore the user to use the native vGPU card and pass through the other card(s)
-                                elif [[ "$VGPU_SUPPORT" == "Unknown" ]]; then
-                                    gpu_info="supports native vGPU with driver version $driver"
-                                    VGPU_SUPPORT="Native"
-                                fi
-                                ;;
-                            Unknown)
-                                    gpu_info="is a unknown GPU"
-                                    VGPU_SUPPORT="No"
-                                ;;
+                        case "$vgpu" in
+                            No) gpu_info="is not vGPU capable" ;;
+                            Yes) gpu_info="is vGPU capable through vgpu_unlock with driver version $driver" ;;
+                            Native) gpu_info="supports native vGPU with driver version $driver" ;;
+                            *) gpu_info="has unknown vGPU capability" ;;
                         esac
 
-                        # Display GPU info
-                        echo "$index: $description $gpu_info"
+                        echo "$index: $description [PCI $pci_id, 10de:$gpu_device_id] $gpu_info"
                     else
                         echo "$index: GPU Device ID: $gpu_device_id on PCI bus 0000:$pci_id (query result not found in database)"
                     fi
@@ -2117,26 +2119,20 @@ case $STEP in
 
                 echo ""
 
-                # Prompt the user to select a GPU
-                echo -e "${BLUE}[?]${NC} Select the GPU you want to enable vGPU for. All other GPUs will be passed through."
-                read -p "$(echo -e "${BLUE}[?]${NC} Enter the corresponding number: ")" selected_index
-                echo ""
-
-                # Validate user input
-                if [[ ! "$selected_index" =~ ^[1-$index]$ ]]; then
-                    echo -e "${RED}[!]${NC} Invalid input. Please enter a number between 1 and $((index-1))."
-                    exit 1
-                fi
-
-                # Get the PCI ID of the selected GPU
-                index=1
-                for pci_id in "${!gpu_pci_groups[@]}"; do
-                    if [[ $index -eq $selected_index ]]; then
-                        selected_pci_id=$pci_id
+                # Validate a decimal menu number against the displayed list.
+                echo -e "${BLUE}[?]${NC} Select the GPU you want to enable vGPU for. You can configure passthrough for the others afterward."
+                gpu_count=${#gpu_pci_order[@]}
+                while true; do
+                    read -r -p "$(echo -e "${BLUE}[?]${NC} Enter the corresponding number: ")" selected_index || exit 1
+                    if [[ "$selected_index" =~ ^[1-9][0-9]*$ ]] &&
+                       (( ${#selected_index} <= ${#gpu_count} )) &&
+                       (( selected_index <= gpu_count )); then
                         break
                     fi
-                    ((index++))
+                    echo -e "${RED}[!]${NC} Invalid input. Please enter a number between 1 and $gpu_count."
                 done
+                echo ""
+                selected_pci_id=${gpu_pci_order[selected_index-1]}
 
                 gpu_device_id=${gpu_pci_groups[$selected_pci_id]}
                 query_result=$(query_gpu_info "$gpu_device_id")

@@ -4,7 +4,7 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 
 ## Quick Context
 
-**Project**: Proxmox vGPU Installer v1.90
+**Project**: Proxmox vGPU Installer v1.91
 **Status**: Stable release (main branch)
 **Key Features**: Auto-discovery host drivers, auto-generated guest drivers, kernel 7.x support, manual GPU override & unflagged card unlock support, Proxmox 9 + Pascal guards, experimental merged driver builder (Issue #10), browser LXC downloader (v1.90)
 **Key Files**: `proxmox-installer.sh`, `lib/*.sh`, `api/`, `driver_patches.json`, `gpu_info.db`
@@ -17,7 +17,7 @@ This file provides comprehensive guidance for AI agents (Kiro, Claude, etc.) wor
 This repository contains a comprehensive Bash script that automates the installation and configuration of NVIDIA vGPU drivers on Proxmox VE 7, 8, and 9 hypervisors. The project handles the complex process of setting up vGPU support including driver installation, patching, licensing, and system configuration with support for both native vGPU and vgpu_unlock capabilities.
 
 ### Main Components
-- **proxmox-installer.sh** - Main installer (v1.90, supports driver 16.x-20.1 + experimental merged 550.90/570.124/580.126/580.159)
+- **proxmox-installer.sh** - Main installer (v1.91, supports driver 16.x-20.2 + experimental merged 550.90/570.124/580.126/580.159)
 - **lib/*.sh** - Modular components (repo, kernel, driver, GPU detection, etc.)
 - **lib/vgpu-merge.sh** - Experimental merged builder (vGPU-Unlock-Patcher, Issue #10)
 - **config.txt** - Runtime configuration (step, driver version, vGPU support)
@@ -38,6 +38,11 @@ This repository contains a comprehensive Bash script that automates the installa
 - **Guest Drivers**: Built-in catalog with Linux & Windows drivers
 
 ---
+
+## v1.91 Multi-GPU Selection Fix (Issue #32)
+- The main installer displays GPUs in a stable PCI list with device IDs and per-device classifications, validates numeric selections against the actual count, and retries invalid input. The selected PCI address comes from the displayed list.
+- The v1.90 release files are archived in `old/v1.90/`.
+- Issue #31: older native branches on kernel 7 receive a non-blocking validation warning. A failed native install preserves the NVIDIA installer log when possible and prints diagnostic commands; the failure cause remains unconfirmed.
 
 ## v1.90 & v1.85 & v1.84 Features & Improvements
 
@@ -75,7 +80,7 @@ This repository contains a comprehensive Bash script that automates the installa
 - **vGPU Unlock warning disclaimer**: Added a prominent disclaimer/caution warning during Step 1 and Step 2 GPU detection/selection screens for any vGPU Unlock Capable card to alert the user that success is best-effort and they proceed at their own risk.
 
 ### v1.82 Hotfixes & Compatibility Updates
-- **Proxmox VE 9 + Pascal GPU Compatibility Guard (Issue #23)**: Proxmox VE 9 (running kernel 6.14/7.x) does not support kernel 6.5.x, which is required for driver versions older than 17.6 (like vGPU 16.x). If a user attempts to install vGPU 16.x on Proxmox VE 9, the script now cleanly aborts with a clear message instead of attempting an impossible kernel downgrade on Proxmox 9. It advises installing Proxmox VE 8 instead. Note: This check only applies to consumer/GeForce cards using vGPU Unlock (`VGPU_SUPPORT="Yes"`). Native enterprise Pascal cards (Tesla P4/P40/P100, `VGPU_SUPPORT="Native"`) are fully compatible with PVE 9 using native vGPU 16.x (e.g. 16.14) without unlock.
+- **Proxmox VE 9 + Pascal GPU Compatibility Guard (Issue #23)**: Proxmox VE 9 (running kernel 6.14/7.x) does not support kernel 6.5.x, which is required for driver versions older than 17.6 (like vGPU 16.x). If a user attempts to install vGPU 16.x on Proxmox VE 9, the script now cleanly aborts with a clear message instead of attempting an impossible kernel downgrade on Proxmox 9. It advises installing Proxmox VE 8 instead. Note: This check only applies to consumer/GeForce cards using vGPU Unlock (`VGPU_SUPPORT="Yes"`). Native enterprise Pascal cards (Tesla P4/P40/P100, `VGPU_SUPPORT="Native"`) may use native vGPU without unlock; the exact GPU, driver and kernel combination requires validation. Issue #31 reports that 16.14 initialized one P100 on kernel 7, but does not confirm full vGPU operation.
   * **Why Pascal vGPU Unlock requires Kernel <= 6.5.x**:
     1. **NVIDIA Driver Lock-in**: NVIDIA dropped Pascal architecture support starting with vGPU 17.0. Thus, Pascal consumer cards are restricted to vGPU 16.x (NVIDIA 535.x).
     2. **KVM `enable_apicv` Dependency**: The community `vgpu_unlock` patch relies on the KVM module exporting the `enable_apicv` symbol to bypass NVIDIA's GeForce virtualization block. Linux Kernel 6.8+ (shipped in PVE 8.2+ and 9.x) stopped exporting this symbol, causing patched modules to fail to load at runtime with `Unknown symbol enable_apicv` errors.
