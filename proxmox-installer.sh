@@ -1011,6 +1011,22 @@ map_filename_to_version() {
     return 0
 }
 
+# The legacy database branch list is a hint, not a verified support matrix.
+warn_native_max16_driver() {
+    local hint="${1:-}" branch="${2:-}"
+    if [ "${VGPU_SUPPORT:-}" != "Native" ] || [[ ! "$branch" =~ ^[0-9]+\.[0-9]+$ ]]; then
+        return 0
+    fi
+    if [[ ",$hint," =~ (^|[,\;])16([,\;]|$) ]] &&
+       [[ ! ",$hint," =~ (^|[,\;])(17|18|19|20)([,\;]|$) ]] &&
+       version_ge "$branch" "17.0"; then
+        echo -e "${YELLOW}[!]${NC} GPU database hint ($hint) indicates this card may be limited to vGPU 16.x."
+        echo -e "${YELLOW}[!]${NC} NVIDIA lists Tesla P100, P40, P4, P6 and M60 with 16.x as their last supported vGPU branch."
+        echo -e "${YELLOW}[-]${NC} Verify your exact GPU and hypervisor: https://docs.nvidia.com/vgpu/gpus-supported-by-vgpu.html"
+        echo -e "${YELLOW}[-]${NC} The database hint can be outdated; continuing with your selected branch $branch."
+    fi
+}
+
 select_driver_branch() {
     local require_downloadable="${1:-false}"
     local index=1
@@ -1369,6 +1385,8 @@ perform_step_two() {
         fi
     fi
 
+    local step1_hint="${DRIVER_VERSION:-}"
+
     load_patch_overrides
 
     secure_boot_precheck
@@ -1498,29 +1516,11 @@ perform_step_two() {
                 ;;
         esac
 
-        step1_hint="${DRIVER_VERSION:-}"
-
         if ! select_driver_branch false; then
             exit 1
         fi
 
-        # Issue #29: NVIDIA 595.x (vGPU 20.x) dropped Pascal (e.g. Tesla P100).
-        # DRIVER_VERSION still holds the Step 1 GPU-detection hint here.
-        # The db driver column is a legacy branch list, so "max branch is 16"
-        # (contains 16 but no 17+) is the Pascal-or-older signal — this keeps
-        # Turing (17;16) / Volta (17;16;...) / Ampere cards warning-free.
-        # Non-blocking warning only (v1.84+ liberation philosophy): print and
-        # continue, never gate the install.
-        step1_max16=false
-        if [[ "$step1_hint" == *16* ]] && [[ "$step1_hint" != *17* && "$step1_hint" != *18* && "$step1_hint" != *19* && "$step1_hint" != *20* ]]; then
-            step1_max16=true
-        fi
-        if [[ "$driver_version" == 20.* ]] && [ "$step1_max16" = "true" ]; then
-            echo -e "${YELLOW}[!]${NC} Heads-up: your GPU looks Pascal-era (Step 1 hint: $step1_hint),"
-            echo -e "${YELLOW}[!]${NC} and NVIDIA 595.x dropped Pascal support — if nvidia-smi fails after install"
-            echo -e "${YELLOW}[!]${NC} with 'supported through the NVIDIA 580.xx Legacy drivers', rerun step 2"
-            echo -e "${YELLOW}[!]${NC} and pick 19.5 or older. Continuing anyway (your call, your risk)."
-        fi
+        warn_native_max16_driver "$step1_hint" "$driver_version"
 
         echo -e "${YELLOW}[-]${NC} Driver version: $driver_filename"
 
@@ -1562,6 +1562,12 @@ perform_step_two() {
                 fi
             fi
         fi
+    fi
+
+    # The interactive menu warns before downloading; manual URL/file paths are
+    # checked here once their driver version has been identified.
+    if [ -n "$URL" ] || [ -n "$FILE" ]; then
+        warn_native_max16_driver "$step1_hint" "${driver_version:-}"
     fi
 
     # Older native branches on kernel 7 need version-specific validation. A

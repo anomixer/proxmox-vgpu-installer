@@ -44,14 +44,16 @@ For complete documentation on script architecture, features, and usage, visit ht
 
 ## Compatibility Matrix
 
+NVIDIA's [supported GPU list](https://docs.nvidia.com/vgpu/gpus-supported-by-vgpu.html) gives the last supported vGPU branch per model; hypervisor and driver compatibility must also be checked. For P100/P40/P4/P6 and M60, NVIDIA lists 16.x as the final branch and July 2026 as the maintenance end date.
+
 | GPU Generation | Setup Type | Example Models | Max vGPU Driver | Compatible Host Kernel | Compatible PVE Version | Practical Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Maxwell** (GM20x) | **vGPU Unlock** (GeForce) | GTX 980, GTX 970 | vGPU 16.x (535.x) | **Kernel <= 6.5.x** | **PVE 8.x** (with 6.5 downgrade), PVE 7.x | Stay on PVE 7 or PVE 8 with kernel 6.5.x only. |
-| **Maxwell** (GM20x) | **Native vGPU** (Enterprise) | Tesla M4, M10, M60 | vGPU 16.x (e.g. 16.14) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Can run on newer kernels and newer PVE branches natively. |
+| **Maxwell** | **Native vGPU** | Tesla M10, M60 | M10: up to 19.x; M60: up to 16.x | Verify the GPU, driver and kernel combination | Combination dependent | NVIDIA does not list Tesla M4 as vGPU supported. |
 | **Pascal** (GP10x) | **vGPU Unlock** (GeForce) | GTX 1080, GTX 1070, GTX 1060 | vGPU 16.x (535.x) | **Kernel <= 6.5.x** | **PVE 8.x** (with 6.5 downgrade), PVE 7.x | Use PVE 8 with pinned 6.5.x; do not target PVE 9+. |
-| **Pascal** (GP10x) | **Native vGPU** (Enterprise) | Tesla P4, Tesla P40, Tesla P100 | 16.x to 19.x; verify the exact GPU | Verify the exact driver and kernel combination | PVE 8.x / 9.x; combination dependent | 16.14 initialized a P100 on kernel 7 in Issue #31; full vGPU operation was not confirmed. 19.5 failed on that host. |
+| **Pascal** (GP10x) | **Native vGPU** | Tesla P4, P40, P100 | **16.x** (last NVIDIA-supported branch) | Verify the driver and kernel combination | Combination dependent | Issue #31 reports P100 vGPU operation on 16.14; 19.5 is unsupported for these GPUs. |
 | **Turing** (TU10x/TU11x) | **vGPU Unlock** (GeForce) | RTX 2080, GTX 1660, etc. | vGPU 16.x (535.x), vGPU 17.6 (550.x) | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Supported on PVE 9+ when using newer vGPU branches (17.6+). |
-| **Turing** (TU10x) | **Native vGPU** (Enterprise) | Tesla T4, Quadro RTX 6000 | vGPU 16.x to 20.x | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Compatible on PVE 8 and PVE 9. |
+| **Turing** (TU10x) | **Native vGPU** | Tesla T4, Quadro RTX 6000 | GPU-dependent; Quadro RTX 6000 up to 19.x | Verify the driver and kernel combination | Combination dependent | Check NVIDIA support by model. |
 | **Ampere & Newer** (GA/AD/GB) | **vGPU Unlock** (GeForce) | RTX 3080, RTX 4090, RTX 5090 | **NOT SUPPORTED** | N/A | N/A | Not supported for unlock by this project. |
 | **Ampere & Newer** (GA/AD/GB) | **Native vGPU** (Enterprise) | A10, A16, L4, RTX A6000 | vGPU 16.x to 20.x | Kernel 6.2, 6.5, 6.8, 6.14+, 7.x | PVE 8.x, **PVE 9.x** | Native vGPU path on current PVE branches. |
 
@@ -71,13 +73,13 @@ The menu lists newest first, but **newest is NOT always correct for your card**.
 
 | Your GPU | Pick this branch (max) | NEVER pick |
 | :--- | :--- | :--- |
-| **Tesla P100 / P40 / P4 / P6** (Pascal enterprise, native) | **19.5 (580.159.01)**; verify the exact kernel combination | **20.x (595.x)**: NVIDIA dropped Pascal; install "succeeds" but `dmesg` says `supported through the NVIDIA 580.xx Legacy drivers` and `nvidia-smi` fails ([Issue #29](https://github.com/anomixer/proxmox-vgpu-installer/issues/29)) |
-| **Tesla T4 and newer** (Turing+, native) | Newest available (20.x on kernel 7.x) | — |
+| **Tesla P100 / P40 / P4 / P6** (Pascal enterprise, native) | **16.x** (e.g. 16.14), subject to GPU and hypervisor compatibility | **17.x and newer**: outside NVIDIA vGPU support for these GPUs |
+| **Tesla T4 and other native GPUs** | Check the exact GPU and hypervisor in NVIDIA's support matrix | Do not assume every Turing or newer GPU supports the newest branch |
 | **Consumer Maxwell/Pascal** (GTX 9/10-series, unlock) | **16.x** on PVE 8 + kernel 6.5.x | Anything on PVE 9 (impossible kernel downgrade) |
 | **Consumer Turing** (RTX 20-series, GTX 16-series, unlock) | 17.6+ (default path) or merged 18.0/19.4/19.5 (option 7) | 20.x (no unlock patch) |
 
 > [!WARNING]
-> **Tesla P100 users**: your card (e.g. `10de:15f8`) is Pascal. The 20.x branch will install but the driver will ignore your GPU. Consider **19.5** or older and verify the exact kernel combination; 19.5 failed on the kernel 7 multi-GPU host in [Issue #31](https://github.com/anomixer/proxmox-vgpu-installer/issues/31). The installer also warns if it detects this mismatch.
+> **Tesla P100/P40/P4/P6 and M60 users**: NVIDIA lists **16.x as the last supported vGPU branch**. 19.5 and 20.x are outside official vGPU support for these models. Verify the exact GPU, hypervisor, kernel and guest driver combination; Issue #31 reports successful P100 vGPU use with 16.14 on kernel 7, which does not establish official support for that combination.
 
 ### Which Menu Path Should I Use? (Read This First!)
 
@@ -137,7 +139,7 @@ This installer targets **x86_64 (amd64)** Proxmox VE installations exclusively. 
    ```
 
 3. **Follow the interactive menu:**
-    - Read [Which Driver Branch Should I Pick?](#which-driver-branch-should-i-pick-read-this-first) first — newest is not always correct (e.g. Tesla P100 must stop at 19.5).
+    - Read [Which Driver Branch Should I Pick?](#which-driver-branch-should-i-pick-read-this-first) first — newest is not always correct (e.g. Tesla P100 is limited to vGPU 16.x in the NVIDIA support matrix).
     - Read [Which Menu Path Should I Use?](#which-menu-path-should-i-use-read-this-first) first — standard path is `1 → reboot → 2`; merged path is `1 → reboot → 7` (never run 2 after 7).
     - Select option 1 for new vGPU installation
     - Complete step 1 (system preparation)
@@ -153,6 +155,7 @@ This installer targets **x86_64 (amd64)** Proxmox VE installations exclusively. 
 ## Version History
 
 Changes in version 1.91 (latest release)
+- **Pascal native vGPU guidance (Issue #31)**: Corrected P100/P40/P4/P6 to the NVIDIA-supported 16.x maximum and added a warning for later branch selections when the legacy GPU database indicates a 16.x maximum. The warning is advisory and also applies to manual driver selection.
 - **Multi-GPU selection fix (Issue #32)**: Accepts all displayed GPU numbers, including 10 and above, and retries invalid input. Each GPU is shown with its PCI address, device ID, and its own database classification. Selection uses the same ordered list shown on screen.
 - **Native driver diagnostics (Issue #31)**: Warns that older native vGPU branches on kernel 7 need combination-specific validation. On native driver installation failure, preserves the NVIDIA installer log when available and prints read-only diagnostic commands; it does not determine the cause or change the kernel automatically.
 
@@ -168,7 +171,7 @@ Changes in version 1.85
   - Flow: clone patcher branch `--recursive` → stage VGPU `.run` (local file or alist auto-discovery fallback) → `./patch.sh --repack <target>` → install with `--dkms -m=kernel -s` (+ Secure Boot flags) → enable services → guest drivers → FastAPI-DLS → summary.
   - Kernel guard: warns on kernel 6.17+/7.x (merged 550~580 builds target <= 6.14; use Step 1 downgrade or native 20.x instead).
   - Cleanup: option 3 now also offers to remove `vgpu-unlock-patcher-*` checkouts.
-  - Limitations: each host version needs its own upstream branch + blob diff; `19.0~19.3`, `18.1~18.3`, `20.x` have no merged patch. Pascal/Maxwell still require `16.x + kernel <= 6.5 + PVE 8` regardless of backend.
+  - Limitations: each host version needs its own upstream branch + blob diff; `19.0~19.3`, `18.1~18.3`, `20.x` have no merged patch. The kernel 6.5 / PVE 8 constraint here applies to the older consumer unlock path; native GPU support varies by model and host combination.
 - **vGPU 20.2 driver support**: host `595.91.04` (auto-discovery), Linux guest `595.91.07`, Windows guest `596.86`. Adds support for the newly released **NVIDIA RTX PRO 5000 Blackwell Workstation Edition 72 GB**. Native only.
 
 Changes in version 1.84
@@ -210,7 +213,7 @@ Changes in version 1.8
 - **Expanded Driver Support**: Added vGPU 19.4, 19.5, 20.0, 20.1 drivers and extended 16.x support to 16.14
   - 20.1: 595.71.03 (ZIP format)
   - 20.0: 595.58.02 (Kernel 7.x support)
-  - 19.5: 580.159.01 (recommended for native vGPU)
+  - 19.5: 580.159.01 (for native GPUs that support branch 19.x)
   - 19.4: 580.126.08
   - 16.10-16.14: 535.247.01-535.309.01 (16.14 recommended for Pascal/older GPUs)
   - 16.x support now extends from 16.0 to 16.14 with auto-discovery
@@ -240,7 +243,7 @@ Changes in version 1.8
 - **UI Label Clarifications**: Cleansed the redundant `"Select this for most situations."` text from selection menus and resolved contradictory `"Native GPUs only"` notes for patchable vGPU unlock drivers. Classified 17.6 correctly as `"Turing GPUs"`.
 - **Nvidia Driver Status False-Alarm Fix**: Fixed a false-alarm red message during Step 2. Since consumer cards in vGPU-unlock mode do not natively support vGPU commands directly in the shell without preloading, they always say "No supported devices in vGPU mode". The installer now falls back to standard `nvidia-smi` to verify driver health for consumer cards, displaying a green success message instead. Also corrected visual indicators for actual failures from a red `[+]` to `[!]`.
 - **Modern VM Setup Instructions**: Replaced the legacy PCI passthrough guide with modern PVE 8/9 instructions utilising Datacenter Resource Mappings to define and map mediated devices, with instructions updated to guide checking the 'Advanced' and 'PCI-Express' toggles.
-- **Proprietary Kernel Module Enforcement**: Fixed a critical driver compilation bug where driver version 17.6+ (550.x and newer) defaulted to building open-source (`nvidia-open`) kernel modules. Open-source modules do not support virtual GPUs (vGPU) on any card flavor and cause VM startup crash with `HOST_VGPU_DEVICE` construct failure. The installer now distinguishes between setup configurations and conditionally passes the `-m=kernel` flag to strictly force compiling closed-source proprietary modules for consumer cards (`VGPU_SUPPORT="Yes"`), while native enterprise vGPU cards (`VGPU_SUPPORT="Native"`) skip this flag since the enterprise `vgpu-kvm.run` driver installer does not support or require the `-m` option.
+- **Proprietary Kernel Module Enforcement**: Fixed a critical driver compilation bug where driver version 17.6+ (550.x and newer) defaulted to building open-source (`nvidia-open`) kernel modules. The open kernel module is not supported by some older GPUs; support depends on GPU and vGPU release. The installer now distinguishes between setup configurations and conditionally passes the `-m=kernel` flag to strictly force compiling closed-source proprietary modules for consumer cards (`VGPU_SUPPORT="Yes"`), while native enterprise vGPU cards (`VGPU_SUPPORT="Native"`) skip this flag since module availability and requirements vary by driver release and GPU.
 - **Step 2 Auto GPU Detection Fallback**: Added an automatic GPU detection fallback at the start of Step 2. If the user runs Step 2 directly or from a clean state where `config.txt` has been removed, the script will dynamically detect the system's GPU and restore the appropriate vGPU compatibility flags, preventing the "Unknown or unsupported GPU" crash.
 - **Secure Boot Kernel Downgrade Support**: Extended Secure Boot compatibility to the kernel downgrade module. When downgrading the host to kernel `6.14.11-x-pve` (dynamically discovered latest version, e.g. `6.14.11-9-pve`) on systems with Secure Boot enabled, the installer now automatically checks Secure Boot status and downloads the signed variant (`proxmox-kernel-6.14.11-x-pve-signed`), eliminating UEFI boot failures caused by "bad shim signature".
 - **MOK Certificate DER Format Fix**: Fixed an enrollment abort error where `mokutil --import` rejected the generated PEM-encoded MOK certificate as "not a valid x509 certificate in DER format". The script now automatically generates/converts the certificate into both PEM (`module-signing.crt` for the NVIDIA driver installer) and DER (`module-signing.der` for `mokutil`) formats, enabling seamless MOK enrollment.
